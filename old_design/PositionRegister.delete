@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity =0.8.29;
+
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+import "../lib/AddressArray.sol";
+import "./Position.sol";
+
+contract AccountRegister is Ownable {
+    using Address for address;  
+    using AddressArray for address[];
+
+    event PositionCreated(address owner, address position);
+
+    // owner => miner => position
+    mapping(address => mapping(address => address)) public positions;
+    // position => owner
+    mapping(address => address) public positionOwner;
+    mapping(address => bool) private validClaimer;
+    // miner => actors
+    mapping(address => address[]) public validActors;
+
+    address public efficiencyMatrix;
+    address public healthHelper;
+    address public vault;
+    address public oracleRegister;
+
+    function setMatrix(address _efficiencyMatrix) public onlyOwner {
+        efficiencyMatrix = _efficiencyMatrix;
+    }
+
+    function setHealthHelper(address _healthHelper) public onlyOwner {
+        healthHelper = _healthHelper;
+    }
+
+    function setVault(address _vault) public onlyOwner {
+        vault = _vault;
+    }
+
+    function setOracleRegister(address _oracleRegister) public onlyOwner {
+        oracleRegister = _oracleRegister;
+    }
+
+    function setClaimer(address _claimer, bool _valid) public onlyOwner {
+        validClaimer[_claimer] = _valid;
+    }
+
+    function setActor(
+        address _miner,
+        address _actor,
+        bool _isValid
+    ) public onlyOwner {
+        address[] storage actors = validActors[_miner];
+        (bool hasActor, ) = actors.find(_actor);
+        if (_isValid && !hasActor) {
+            actors.push(_actor);
+        } else if (!_isValid && hasActor) {
+            actors.remove(_actor);
+        }
+    }
+
+    function isValidActor(
+        address _miner,
+        address _actor
+    ) public view returns (bool) {
+        address[] storage actors = validActors[_miner];
+        (bool hasActor, ) = actors.find(_actor);
+        return hasActor;
+    }
+
+    function isValidClaimer(address _claimer) public view returns (bool) {
+        if (
+            !_claimer.isContract() ||
+            validClaimer[_claimer] ||
+            positionOwner[_claimer] != address(0)
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    function isValidPosition(
+        address _position,
+        address _miner
+    ) public view returns (bool) {
+        address owner_ = positionOwner[_position];
+        return positions[owner_][_miner] == _position;
+    }
+
+    function createPosition(
+        address _miner
+    ) public returns (address positionAddress) {
+        address sender = msg.sender;
+        require(
+            positions[sender][_miner] == address(0),
+            "AccountRegister: existing position"
+        );
+        bytes32 salt = keccak256(abi.encodePacked(sender, address(this)));
+        Position position = new Position{salt: salt}(_miner);
+        positionAddress = address(position);
+        positions[sender][_miner] = positionAddress;
+        positionOwner[positionAddress] = sender;
+        emit PositionCreated(sender, positionAddress);
+    }
+}

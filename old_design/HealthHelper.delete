@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity =0.8.29;
+
+import "./abstract/MinerToken.sol";
+import "./EfficiencyMatrix.sol";
+import "./AccountRegister.sol";
+
+contract HealthHelper {
+    struct PositionStatus {
+        uint256 shortBalanceValue;
+        uint256 collateralValue;
+        uint256 obligation;
+        uint256 epochDebt;
+        uint256 estimatedObligationToday;
+        uint256 estimatedDailyDebt;
+        uint256 interestGuaranteed;
+    }
+
+    uint256 public constant COLLATERAL_DENOMINATOR = 10000;
+
+    function _recoverContract(
+        address _position
+    )
+        internal
+        view
+        returns (
+            Position position,
+            IBlockUpdater blockUpdater,
+            EfficiencyMatrix efficiencyMatrix,
+            MinerToken minerToken
+        )
+    {
+        position = Position(_position);
+        minerToken = MinerToken(position.minerToken());
+        blockUpdater = IBlockUpdater(minerToken.blockUpdater());
+        efficiencyMatrix = EfficiencyMatrix(
+            AccountRegister(position.accountRegister()).efficiencyMatrix()
+        );
+    }
+
+
+    function getPositionStatus(
+        address _position,
+        uint256 _newBalance
+    ) public view returns (PositionStatus memory) {
+        (
+            Position position,
+            IBlockUpdater blockUpdater,
+            EfficiencyMatrix efficiencyMatrix,
+            MinerToken minerToken
+        ) = _recoverContract(_position);
+        (uint256 epochDebt, uint256 pendingAmountTime) = pendingDebt(_position);
+        
+        EfficiencyMatrix.Query[] memory queries = new EfficiencyMatrix.Query[](
+            1
+        );
+        queries[0] = EfficiencyMatrix.Query(
+            position.minerToken(),
+            _newBalance,
+            true
+        );
+        return
+            PositionStatus(
+                efficiencyMatrix.querySum(
+                    queries,
+                    minerToken.interestToken(),
+                    _position
+                ), // -> shortBalanceValue
+                efficiencyMatrix.queryFilterSum(
+                    address(minerToken),
+                    minerToken.interestToken(),
+                    _position
+                ), // -> collateralValue
+                position.obligation(), // -> obligation
+                epochDebt, // -> epochDebt
+                (blockUpdater.estimatedPendingReward(pendingAmountTime) * 12) /
+                    10, // -> estimatedObligationToday * 1.2
+                blockUpdater.estimatedDailyReward(_newBalance), // -> estimatedDailyDebt
+                position.interestGuaranteed() // -> interestGuaranteed
+            );
+    }
+
+    function healthCheck(
+        address _position,
+        uint256 _newBalance,
+        uint256 _collateralRate,
+        uint256 _guaranteedDays
+    ) public view returns (bool isCollateralFit, bool isGuaranteedFit) {
+        PositionStatus memory positionStatus = getPositionStatus(
+            _position,
+            _newBalance
+        );
+        uint256 collateralPositive = positionStatus.collateralValue +
+            positionStatus.interestGuaranteed;
+        uint256 totalObligation = positionStatus.obligation +
+            positionStatus.epochDebt +
+            positionStatus.estimatedObligationToday;
+        if (collateralPositive < totalObligation) {
+            return (false, false);
+        }
+        isCollateralFit =
+            positionStatus.shortBalanceValue * _collateralRate <=
+            (collateralPositive - totalObligation) * COLLATERAL_DENOMINATOR;
+        if (positionStatus.interestGuaranteed < totalObligation) {
+            return (isCollateralFit, false);
+        }
+        isGuaranteedFit =
+            positionStatus.estimatedDailyDebt * _guaranteedDays <=
+            (positionStatus.interestGuaranteed - totalObligation);
+    }
+}

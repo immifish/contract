@@ -1,0 +1,311 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity =0.8.29;
+
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "./interface/IBlockUpdater.sol";
+import "./interface/IMinerToken.sol";
+
+//todo 还需要增加factory, 通过factory来铸造protfolio 
+// 针对不同的情况可以有不同的方法，甚至可以直接平仓？？
+// make a erc20 compatible contract
+contract MinerToken is Initializable, IMinerToken, IERC20, IERC20Errors, OwnableUpgradeable {
+    using Address for address;
+
+    event DesignatedBeneficiaryUpdated(address indexed settlor, address indexed beneficiary, address indexed operator);
+
+    /// @notice works for both creditor and debtor
+    /// @param lastModifiedEpoch The epoch when this snapshot was last updated
+    /// @param lastModifiedTime The timestamp when this snapshot was last updated  
+    struct TimeStamp {
+        uint256 lastModifiedEpoch;
+        uint256 lastModifiedTime;
+    }
+    
+    /// @notice A snapshot represents either a creditor or debtor position
+    /// @dev For creditors, interestOrDebt tracks earned interest
+    /// @dev For debtors, interestOrDebt tracks outstanding debt
+    /// @param balance The token balance or minted token (loan) balance at time of snapshot
+    /// @param interestOrDebt is the interest or debt amount that are settled
+    /// @param interestOrDebtFactor is the pending interest / debt factor as the reward factor is not updated yet
+    struct BalanceSnapshot {
+        uint256 balance;
+        uint256 interestOrDebt;
+        uint256 interestOrDebtFactor;
+    }
+
+    // the creditors are addresses that hold this token
+    mapping(address => BalanceSnapshot) _creditors;
+    mapping(address account => mapping(address spender => uint256)) _allowances;
+    /// @notice Tracks addresses that have minted (borrowed) tokens, i.e. portfolio contract addresses
+    /// @dev An address can be both a creditor (token holder) and debtor (token borrower)
+    /// @dev The debt is tracked as a balance and is not tokenized
+    mapping(address => BalanceSnapshot) _debtors;
+    mapping(address => TimeStamp) _timeStamps;
+    // most contract can not claim interest as creditor, so we need to designate a beneficiary
+    mapping(address => address) _designatedBeneficiary;
+    IERC20 _interestToken;
+    IBlockUpdater _blockUpdater;
+
+    // Decimals for the token
+    uint8 _decimals;
+    string _name;
+    string _symbol;
+    uint256 _totalSupply;
+
+    // Initializer function to set up the token
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address interestToken_,
+        address blockUpdater_
+    ) public initializer {
+        _name = name_;
+        _symbol = symbol_;
+        _decimals = decimals_;
+        __Ownable_init(msg.sender);   // Initialize the Ownable contract with the deployer as the owner
+        _interestToken = IERC20(interestToken_); // Set the interest token address
+        _blockUpdater = IBlockUpdater(blockUpdater_);
+    }
+
+    function name() public view virtual returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view virtual returns (string memory) {
+        return _symbol;
+    }
+
+    // Override the decimals function to return the custom decimals value
+    function decimals() public view virtual returns (uint8) {
+        return _decimals;
+    }
+
+    function totalSupply() public view virtual override returns (uint256) {
+        return _totalSupply;
+    }
+
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[owner][spender];
+    }
+
+    function _approve(address owner, address spender, uint256 value) internal {
+        _approve(owner, spender, value, true);
+    }
+
+    function approve(address spender, uint256 value) public virtual override returns (bool) {
+        _approve(_msgSender(), spender, value);
+        return true;
+    }
+    
+    function _approve(address owner, address spender, uint256 value, bool emitEvent) internal virtual {
+        if (owner == address(0)) {
+            revert ERC20InvalidApprover(address(0));
+        }
+        if (spender == address(0)) {
+            revert ERC20InvalidSpender(address(0));
+        }
+        _allowances[owner][spender] = value;
+        if (emitEvent) {
+            emit Approval(owner, spender, value);
+        }
+    }
+
+    function _spendAllowance(address owner, address spender, uint256 value) internal virtual {
+        uint256 currentAllowance = allowance(owner, spender);
+        if (currentAllowance < type(uint256).max) {
+            if (currentAllowance < value) {
+                revert ERC20InsufficientAllowance(spender, currentAllowance, value);
+            }
+            unchecked {
+                _approve(owner, spender, currentAllowance - value, false);
+            }
+        }
+    }
+
+    function interestToken() public view override returns (address) {
+        return address(_interestToken);
+    }
+
+    function getDesignatedBeneficiary(address _settlor) public view returns (address) {
+        return _designatedBeneficiary[_settlor];
+    }
+
+    // reserved for upgrade
+    function setBlockUpdater(address _newBlockUpdater) public onlyOwner {
+        _blockUpdater = IBlockUpdater(_newBlockUpdater);
+    }
+
+    function blockUpdater() public view override returns (address) {
+        return address(_blockUpdater);
+    }
+
+    // redirect the interest to designated beneficiary. The beneficiary can claim interest for the settlor
+    function setDesignatedBeneficiary(address _settlor, address _beneficiary) public {
+        require(_settlor != address(0), "MinerToken: settlor cannot be zero address");
+        require(_beneficiary != address(0), "MinerToken: beneficiary cannot be zero address");
+        
+        if (_msgSender() == _settlor || _msgSender() == owner()) {
+            _designatedBeneficiary[_settlor] = _beneficiary;
+            emit DesignatedBeneficiaryUpdated(_settlor, _beneficiary, _msgSender());
+        } else {
+            revert("MinerToken: caller must be settlor or owner");
+        }
+    }
+
+    // it works for both creditor and debtor
+    function _settleAndUpdateSnapshot(address _address) internal {
+        TimeStamp storage timeStamp = _timeStamps[_address];
+        // call multiple times in one transaction will not update the snapshot
+        if (block.timestamp == timeStamp.lastModifiedTime) {
+            return;
+        }
+        BalanceSnapshot storage creditorSnapshot = _creditors[_address];
+        BalanceSnapshot storage debtorSnapshot = _debtors[_address];
+        uint256 interestBeforeRebalance;
+        uint256 debtBeforeRebalance;
+        if (creditorSnapshot.balance > 0){
+            (uint256 epochReward, uint256 pendingInterestOrDebtFactor) = _blockUpdater
+            .pendingReward(
+                creditorSnapshot.balance,
+                timeStamp.lastModifiedEpoch,
+                timeStamp.lastModifiedTime,
+                creditorSnapshot.interestOrDebtFactor
+            );
+            interestBeforeRebalance = creditorSnapshot.interestOrDebt + epochReward;
+            creditorSnapshot.interestOrDebtFactor = pendingInterestOrDebtFactor;
+        }
+        if (debtorSnapshot.balance > 0){
+            (uint256 epochReward, uint256 pendingInterestOrDebtFactor) = _blockUpdater
+            .pendingReward(
+                debtorSnapshot.balance,
+                timeStamp.lastModifiedEpoch,
+                timeStamp.lastModifiedTime,
+                debtorSnapshot.interestOrDebtFactor
+            );
+            debtBeforeRebalance = debtorSnapshot.interestOrDebt + epochReward;
+            debtorSnapshot.interestOrDebtFactor = pendingInterestOrDebtFactor;
+        }
+        if (interestBeforeRebalance > debtBeforeRebalance){
+            debtorSnapshot.interestOrDebt = 0;
+            creditorSnapshot.interestOrDebt = interestBeforeRebalance - debtBeforeRebalance;
+        }else{
+            debtorSnapshot.interestOrDebt = debtBeforeRebalance - interestBeforeRebalance;
+            creditorSnapshot.interestOrDebt = 0;
+        }
+        timeStamp.lastModifiedTime = block.timestamp;
+        if (timeStamp.lastModifiedEpoch != _blockUpdater.getCurrentEpoch()) {
+            timeStamp.lastModifiedEpoch = _blockUpdater.getCurrentEpoch();
+        }
+    }
+
+    function balanceOf(address _address) public view virtual override returns (uint256) {
+        return _creditors[_address].balance;
+    }
+
+    /**
+     * @dev Updates creditor balances for token transfers
+     * @param from Address sending tokens
+     * @param to Address receiving tokens 
+     * @param value Amount of tokens to transfer
+     * @notice This function only applies to creditor balances and does not modify totalSupply
+     */
+    function _update(address from, address to, uint256 value) internal virtual {
+        // Validate addresses
+        if (from == address(0)) {
+            revert ERC20InvalidSender(address(0));
+        }
+        if (to == address(0)) {
+            revert ERC20InvalidReceiver(address(0));
+        }
+
+        // Settle and update sender's snapshot
+        _settleAndUpdateSnapshot(from);
+        uint256 fromBalance = balanceOf(from);
+        if (fromBalance < value) {
+            revert ERC20InsufficientBalance(from, fromBalance, value);
+        }
+        unchecked {
+            // Overflow not possible: value <= fromBalance <= totalSupply
+            _creditors[from].balance = fromBalance - value;
+        }
+
+        // Settle and update receiver's snapshot
+        _settleAndUpdateSnapshot(to);
+        unchecked {
+            // Overflow not possible: balance + value is at most totalSupply
+            _creditors[to].balance += value;
+        }
+
+        emit Transfer(from, to, value);
+    }
+
+    function _transfer(address from, address to, uint256 value) internal {
+        if (from == address(0)) {
+            revert ERC20InvalidSender(address(0));
+        }
+        if (to == address(0)) {
+            revert ERC20InvalidReceiver(address(0));
+        }
+        _update(from, to, value);
+    }
+
+    function transfer(address to, uint256 value) public virtual returns (bool) {
+        address owner = _msgSender();
+        _transfer(owner, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) public virtual returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, value);
+        _transfer(from, to, value);
+        return true;
+    }
+
+    // claim interest of creditor, can call by owner or designated beneficiary
+    function claim(address _creditor, address _to, uint256 _amount) external {
+        if (msg.sender == _creditor || msg.sender == _designatedBeneficiary[_creditor]) {
+            _settleAndUpdateSnapshot(_creditor);
+            if (_creditors[_creditor].balance < _amount) {
+                revert MinerTokenInsufficientInterest(_creditor, _creditors[_creditor].balance, _amount);
+            }
+            unchecked {
+                _creditors[_creditor].balance -= _amount;
+            }
+            _interestToken.transfer(_to, _amount);
+            emit ClaimReward(_creditor, _to, _amount);
+        } else {
+            revert("MinerToken: caller must be creditor or designated beneficiary");
+        }
+    }
+
+    // this can only be called by debtor address
+    function burn(uint256 amount) external {
+        require(amount > 0, "MinerToken: burn amount must be greater than 0");
+        address _address = _msgSender();
+        BalanceSnapshot storage debtorSnapshot = _debtors[_address];
+        BalanceSnapshot storage creditorSnapshot = _creditors[_address];
+        if (debtorSnapshot.balance < amount) {
+            revert("MinerToken: insufficient debtor balance");
+        }
+        if (creditorSnapshot.balance < amount) {
+            revert("MinerToken: insufficient creditor balance");
+        }
+        _settleAndUpdateSnapshot(_address);
+        unchecked {
+            _debtors[_address].balance -= amount;
+            _creditors[_address].balance -= amount;
+        }
+        _totalSupply -= amount;
+        emit Burn(_address, amount);
+    }
+}
