@@ -6,51 +6,31 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "./interface/IBlockUpdater.sol";
+import "./interface/ICycleUpdater.sol";
 import "./interface/IMinerToken.sol";
-import "./lib/int257.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgradeable {
     using Address for address;
-    using Int257Lib for Int257Lib.Int257;
 
     event DesignatedBeneficiaryUpdated(address indexed settlor, address indexed beneficiary, address indexed operator);
 
-    struct TimeStamp {
-        uint256 lastModifiedEpoch;
-        uint256 lastModifiedTime;
-    }
     
-    /// @notice there is no balance because we use token balance
-    struct Yield {
-        TimeStamp timeStamp;
-        uint256 interestFactor;
-        uint256 interest;
-    }
-
-    /// @notice the balance is short position balance
-    struct Obligation {
-        TimeStamp timeStamp;
-        uint256 outStandingBalance;
-        uint256 debtFactor;
-        Int257Lib.Int257 interestReserve;
-    }
 
     /// @notice the addresses of the creditors and debtors are mutually exclusive,
     /// @notice the creditor can be token holder, but the debtor can not hold any token
     /// @notice this mechanism should be guaranteed by top layer functions
-    mapping(address => Yield) _creditors;
-    mapping(address => Obligation) _debtors;
+    mapping(address => Creditor) _creditors;
+    mapping(address => Debtor) _debtors;
 
     // most contract can not claim interest as creditor, so we need to designate a beneficiary
     mapping(address => address) _designatedBeneficiary;
 
     IERC20 _interestToken;
-    IBlockUpdater _blockUpdater;
+    ICycleUpdater _cycleUpdater;
 
     // addresses for other contracts to call
     address _debtorManager;
-    address _valuationService;
 
     // Decimals for the token
     uint8 _decimals;
@@ -59,19 +39,23 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         return _debtors[_debtor].timeStamp.lastModifiedTime > 0;
     }
 
+    function getDebtor(address _debtor) public view returns (Debtor memory) {
+        return _debtors[_debtor];
+    }
+
     // Initializer function to set up the token
     function initialize(
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
         address interestToken_,
-        address blockUpdater_
+        address cycleUpdater_
     ) public initializer {
         __ERC20_init(name_, symbol_);
         _decimals = decimals_;
         __Ownable_init(msg.sender);   // Initialize the Ownable contract with the deployer as the owner
         _interestToken = IERC20(interestToken_); // Set the interest token address
-        _blockUpdater = IBlockUpdater(blockUpdater_);
+        _cycleUpdater = ICycleUpdater(cycleUpdater_);
     }
 
     // Override the decimals function to return the custom decimals value
@@ -84,24 +68,16 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     }
 
     // reserved for upgrade
-    function setBlockUpdater(address _newBlockUpdater) public onlyOwner {
-        _blockUpdater = IBlockUpdater(_newBlockUpdater);
+    function setCycleUpdater(address _newCycleUpdater) public onlyOwner {
+        _cycleUpdater = ICycleUpdater(_newCycleUpdater);
     }
 
-    function blockUpdater() public view override returns (address) {
-        return address(_blockUpdater);
+    function cycleUpdater() public view override returns (address) {
+        return address(_cycleUpdater);
     }
 
     function setDebtorManager(address _newDebtorManager) public onlyOwner {
         _debtorManager = _newDebtorManager;
-    }
-
-    function setValuationService(address _newValuationService) public onlyOwner {
-        _valuationService = _newValuationService;
-    }
-
-    function valuationService() public view returns (address) {
-        return _valuationService;
     }
 
     // redirect the interest to designated beneficiary. The beneficiary can claim interest for the settlor
@@ -122,16 +98,16 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     }
 
     function _settleCreditor(address _creditor) public {
-        Yield storage creditor = _creditors[_creditor];
+        Creditor storage creditor = _creditors[_creditor];
         if (creditor.timeStamp.lastModifiedTime == block.timestamp) {
             return;
         }
         // if not initialized, only need to update the timeStamp (init)
         if (creditor.timeStamp.lastModifiedTime > 0){
-            (uint256 epochReward, uint256 newInterestFactor) = _blockUpdater
-            .pendingReward(
+            (uint256 epochReward, uint256 newInterestFactor) = _cycleUpdater
+            .interestPreview(
                 balanceOf(_creditor),
-                creditor.timeStamp.lastModifiedEpoch,
+                creditor.timeStamp.lastModifiedCycle,
                 creditor.timeStamp.lastModifiedTime,
                 creditor.interestFactor
             );
@@ -139,32 +115,32 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
             creditor.interest += epochReward;
             creditor.timeStamp.lastModifiedTime = block.timestamp;
         }
-        if (creditor.timeStamp.lastModifiedEpoch != _blockUpdater.getCurrentEpoch()) {
-            creditor.timeStamp.lastModifiedEpoch = _blockUpdater.getCurrentEpoch();
+        if (creditor.timeStamp.lastModifiedCycle != _cycleUpdater.getCurrentCycleIndex()) {
+            creditor.timeStamp.lastModifiedCycle = _cycleUpdater.getCurrentCycleIndex();
         }
     }
 
     function _settleDebtor(address _debtor) public {
-        Obligation storage debtor = _debtors[_debtor];
+        Debtor storage debtor = _debtors[_debtor];
         if (debtor.timeStamp.lastModifiedTime == block.timestamp) {
             return;
         }
         // if not initialized, only need to update the timeStamp (init)
         if (debtor.timeStamp.lastModifiedTime > 0){
-            (uint256 epochDebt, uint256 newDebtFactor) = _blockUpdater
-                .pendingReward(
+            (uint256 epochDebt, uint256 newDebtFactor) = _cycleUpdater
+                .interestPreview(
                     debtor.outStandingBalance,
-                    debtor.timeStamp.lastModifiedEpoch,
+                    debtor.timeStamp.lastModifiedCycle,
                     debtor.timeStamp.lastModifiedTime,
                     debtor.debtFactor
                 );
             debtor.debtFactor = newDebtFactor;
-            debtor.interestReserve.subStorage(epochDebt);
+            debtor.interestReserve -= SafeCast.toInt256(epochDebt);
         }
 
         debtor.timeStamp.lastModifiedTime = block.timestamp;
-        if (debtor.timeStamp.lastModifiedEpoch != _blockUpdater.getCurrentEpoch()) {
-            debtor.timeStamp.lastModifiedEpoch = _blockUpdater.getCurrentEpoch();
+        if (debtor.timeStamp.lastModifiedCycle != _cycleUpdater.getCurrentCycleIndex()) {
+            debtor.timeStamp.lastModifiedCycle = _cycleUpdater.getCurrentCycleIndex();
         }
     }
 
@@ -193,16 +169,16 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         // Update creditor's interest
         _settleCreditor(_creditor);
         // Check sufficient interest available
-        Yield storage creditorYield = _creditors[_creditor];
-        if (creditorYield.interest < _amount) {
-            revert MinerTokenInsufficientInterest(_creditor, creditorYield.interest, _amount);
+        Creditor storage creditor = _creditors[_creditor];
+        if (creditor.interest < _amount) {
+            revert MinerTokenInsufficientInterest(_creditor, creditor.interest, _amount);
         }
         // Update interest balance and transfer tokens
         unchecked {
-            creditorYield.interest -= _amount;
+            creditor.interest -= _amount;
         }
         _interestToken.transfer(_to, _amount);
-        emit ClaimReward(_creditor, _to, _amount);
+        emit Claim(_creditor, _to, _amount);
     }
 
     function _update(address from, address to, uint256 value) internal override {
@@ -222,7 +198,7 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
             _settleCreditor(from);
             if (isDebtor(to)) {
                 // transfer to debtor means to reduce the outStandingBalance by burning token
-                Obligation storage debtor = _debtors[to];
+                Debtor storage debtor = _debtors[to];
                 if (debtor.outStandingBalance < value) {
                     revert("MinerToken: insufficient outStandingBalance");
                 } else {
@@ -251,9 +227,9 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     function removeReserve(uint256 _amount) public {
         address _debtor = _msgSender();
         require(isDebtor(_debtor), "MinerToken: cannot remove reserve from non-debtor");
-        Int257Lib.Int257 storage interestReserve = _debtors[_debtor].interestReserve;
-        require(!interestReserve.isNegative() && interestReserve.magnitude >= _amount, "MinerToken: insufficient interest reserve");
-        interestReserve.subStorage(_amount);
+        Debtor storage debtor = _debtors[_debtor];
+        require(debtor.interestReserve >= 0 && uint256(debtor.interestReserve) >= _amount, "MinerToken: insufficient interest reserve");
+        debtor.interestReserve -= SafeCast.toInt256(_amount);
         _interestToken.transfer(_debtor, _amount);
         emit RemoveReserve(_debtor, _amount);
     }
@@ -262,23 +238,21 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     function addReserve(address _debtor, uint256 _amount) public {
         require(isDebtor(_debtor), "MinerToken: cannot add reserve to non-debtor");
         _interestToken.transferFrom(_msgSender(), address(this), _amount);
-        Int257Lib.Int257 storage interestReserve = _debtors[_debtor].interestReserve;
-        interestReserve.addStorage(_amount);
+        _debtors[_debtor].interestReserve += SafeCast.toInt256(_amount);
         emit AddReserve(_debtor, _amount);
     }
 
     // simluate settle to give interest reserve result
-    function queryInterestReserve(address _debtor) public view returns (uint256 reserve, bool isNegative) {
-        Obligation storage debtor = _debtors[_debtor];
-        (uint256 epochDebt, ) = _blockUpdater
-                .pendingReward(
+    function queryInterestReserve(address _debtor) public view returns (int256) {
+        Debtor storage debtor = _debtors[_debtor];
+        (uint256 epochDebt, ) = _cycleUpdater
+                .interestPreview(
                     debtor.outStandingBalance,
-                    debtor.timeStamp.lastModifiedEpoch,
+                    debtor.timeStamp.lastModifiedCycle,
                     debtor.timeStamp.lastModifiedTime,
                     debtor.debtFactor
                 );
-        Int257Lib.Int257 memory result = debtor.interestReserve.subMemory(epochDebt);
-        return (result.magnitude, result.negative);
+        return debtor.interestReserve - SafeCast.toInt256(epochDebt);
     }
 
 }

@@ -3,7 +3,7 @@
 pragma solidity =0.8.29;
 
 import "./interface/IDebtor.sol";
-import "./interface/IBlockUpdater.sol";
+import "./interface/ICycleUpdater.sol";
 import "./interface/IMinerToken.sol";
 
 contract Debtor is IDebtor {

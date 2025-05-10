@@ -74,12 +74,12 @@ library Int257Lib {
         if (a.negative) {
             uint256 sum = a.magnitude + b;
             require(sum >= a.magnitude, "Int257: overflow in neg-sub");
-            return Int257(sum, false);
+            return Int257(sum, true); // Should stay negative
         } else {
             if (a.magnitude >= b) {
-                return Int257(a.magnitude - b, true);
+                return Int257(a.magnitude - b, false); // Should stay positive
             } else {
-                return Int257(b - a.magnitude, false);
+                return Int257(b - a.magnitude, true); // Should be negative
             }
         }
     }
