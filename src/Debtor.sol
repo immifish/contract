@@ -5,32 +5,23 @@ pragma solidity =0.8.29;
 import "./interface/IDebtor.sol";
 import "./interface/ICycleUpdater.sol";
 import "./interface/IMinerToken.sol";
+import "./interface/IDebtorManager.sol";
 
 contract Debtor is IDebtor {
     uint8 public constant VERSION = 1;
-    address public minerToken;
-    address public manager;
-    
 
-    // those factors are for liquidation
-    uint256 public constant SCALING_FACTOR = 10000;
-    uint256 public minCollateralRate;
-    uint256 public minPaymentCycle;
-    uint256 public healthyCollateralRate;
-    uint256 public healthyPaymentCycle;
+    IDebtorManager immutable debtorManager;
 
-    constructor(address minerToken_, 
-                uint256 _minCollateralRate, 
-                uint256 _minPaymentCycle, 
-                uint256 _healthyCollateralRate, 
-                uint256 _healthyPaymentCycle
-                ) {
-        minerToken = minerToken_;
-        minCollateralRate = _minCollateralRate;
-        minPaymentCycle = _minPaymentCycle;
-        healthyCollateralRate = _healthyCollateralRate;
-        healthyPaymentCycle = _healthyPaymentCycle;
-        manager = msg.sender;
+    constructor() {
+        debtorManager = IDebtorManager(msg.sender);
+    }
+
+    function _isOwner() internal view returns (bool) {
+        return address(this) == debtorManager.getDebtor(msg.sender);
+    }
+
+    function getDebtorManager() public view returns (address) {
+        return address(debtorManager);
     }
 
     //should make delegateCall1 (by owner) and check on healthy
