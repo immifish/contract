@@ -242,17 +242,4 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         emit AddReserve(_debtor, _amount);
     }
 
-    // simluate settle to give interest reserve result
-    function queryInterestReserve(address _debtor) public view returns (int256) {
-        Debtor storage debtor = _debtors[_debtor];
-        (uint256 epochDebt, ) = _cycleUpdater
-                .interestPreview(
-                    debtor.outStandingBalance,
-                    debtor.timeStamp.lastModifiedCycle,
-                    debtor.timeStamp.lastModifiedTime,
-                    debtor.debtFactor
-                );
-        return debtor.interestReserve - SafeCast.toInt256(epochDebt);
-    }
-
 }

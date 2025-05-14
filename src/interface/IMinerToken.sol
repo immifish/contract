@@ -47,5 +47,4 @@ interface IMinerToken {
 
     function cycleUpdater() external view returns (address);
 
-    function queryInterestReserve(address debtor) external view returns (int256);
 }

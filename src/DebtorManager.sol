@@ -141,7 +141,6 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                                          SafeCast.toInt256(_estimateDebtUsingLastCycleByFactor(debtFactor));
         
         //2. check collateral rate
-        // int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(quoteToken, _debtor));
         int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(minerToken.interestToken(), interestReserve);
         int256 outStandingValue = _queryPriceInt256(address(minerToken), SafeCast.toInt256(_minerDebtor.outStandingBalance));
 
