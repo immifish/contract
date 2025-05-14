@@ -120,6 +120,9 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
         if (_lastModifiedTime == 0) {
             return (0, 0);
         }
+        if (_lastModifiedTime == block.timestamp) {
+            return (0, _factorBeforeUpdate);
+        }
         if (_lastModifiedCycle == getCurrentCycleIndex()) {
             updatedFactor = _balance * 
                             (block.timestamp - _lastModifiedTime) + 

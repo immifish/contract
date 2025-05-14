@@ -34,10 +34,8 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                         address _cycleUpdater,
                         address _quoteToken,
                         address _valuationService, 
-                        int256 _minCollateralRate, 
-                        int256 _minPaymentCycles, 
-                        int256 _healthyCollateralRate, 
-                        int256 _healthyPaymentCycles
+                        int256 _minCollateralRatio, 
+                        int256 _marginBufferedCollateralRatio
                         ) external initializer {
         __Ownable_init(msg.sender);
         minerToken = IMinerToken(_minerToken);
@@ -45,10 +43,8 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
         quoteToken = _quoteToken;
         valuationService = IValuationService(_valuationService);
         defaultDebtorParams = DebtorParams({
-            minCollateralRate: _minCollateralRate,
-            minPaymentCycles: _minPaymentCycles,
-            healthyCollateralRate: _healthyCollateralRate,
-            healthyPaymentCycles: _healthyPaymentCycles
+            minCollateralRatio: _minCollateralRatio,
+            marginBufferedCollateralRatio: _marginBufferedCollateralRatio
         });
     }
 
@@ -65,21 +61,17 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
     }
 
     function setCustomDebtorParams(address _debtor, 
-                                int256 _minCollateralRate,
-                                int256 _minPaymentCycles,
-                                int256 _healthyCollateralRate,
-                                int256 _healthyPaymentCycles) external onlyOwner {
+                                int256 _minCollateralRatio,
+                                int256 _marginBufferedCollateralRatio) external onlyOwner {
         _customDebtorParams[_debtor] = DebtorParams({
-            minCollateralRate: _minCollateralRate,
-            minPaymentCycles: _minPaymentCycles,
-            healthyCollateralRate: _healthyCollateralRate,
-            healthyPaymentCycles: _healthyPaymentCycles
+            minCollateralRatio: _minCollateralRatio,
+            marginBufferedCollateralRatio: _marginBufferedCollateralRatio
         });
     }
 
-    function getDebtorParams(address _debtor) external view returns (DebtorParams memory) {
+    function getDebtorParams(address _debtor) public view returns (DebtorParams memory) {
         DebtorParams memory debtorParams = _customDebtorParams[_debtor];
-        if (debtorParams.minCollateralRate == 0) {
+        if (debtorParams.minCollateralRatio == 0) {
             return defaultDebtorParams;
         }
         return debtorParams;
@@ -129,33 +121,45 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
         return SafeCast.toInt256(absPrice);
     }
 
-    function healthCheck(
-        address _debtor,
-        uint256 _useOutstandingBalance
-    ) public view returns (int256 collateralRate, int256 remainingPaymentCycles) {
-        int256 interestReserve = minerToken.queryInterestReserve(_debtor);
+    function healthCheckSimulation(IMinerToken.Debtor memory _minerDebtor,
+                                int256 collateralValueInDebtorContract,
+                                int256 minCollateralRatio,
+                                int256 marginBufferedCollateralRatio
+                            ) public view returns (int256 collateralRatio, 
+                            bool passMinCollateralRatioCheck,
+                            bool passMarginBufferedCollateralRatioCheck,
+                           int256 interestReserve) {
 
-        //1. check payment cycle
-        IMinerToken.Debtor memory minerDebtor = minerToken.getDebtor(_debtor);
+        //1. check interest reserve
         (uint256 finalizedDebt, uint256 debtFactor) = cycleUpdater.interestPreview(
-            _useOutstandingBalance, 
-            minerDebtor.timeStamp.lastModifiedCycle, 
-            minerDebtor.timeStamp.lastModifiedTime,
-            minerDebtor.debtFactor);
-        int256 revaluedInterestReserve = interestReserve - 
+            _minerDebtor.outStandingBalance, 
+            _minerDebtor.timeStamp.lastModifiedCycle, 
+            _minerDebtor.timeStamp.lastModifiedTime,
+            _minerDebtor.debtFactor);
+        interestReserve = _minerDebtor.interestReserve - 
                                          SafeCast.toInt256(finalizedDebt) - 
                                          SafeCast.toInt256(_estimateDebtUsingLastCycleByFactor(debtFactor));
-        remainingPaymentCycles =  revaluedInterestReserve / 
-                        SafeCast.toInt256(_estimateFinalizedDebtUsingLastCycleByBalance(_useOutstandingBalance));
         
         //2. check collateral rate
-        int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(quoteToken, _debtor));
-        int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(minerToken.interestToken(), revaluedInterestReserve);
-        int256 outStandingValue = _queryPriceInt256(address(minerToken), SafeCast.toInt256(_useOutstandingBalance));
+        // int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(quoteToken, _debtor));
+        int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(minerToken.interestToken(), interestReserve);
+        int256 outStandingValue = _queryPriceInt256(address(minerToken), SafeCast.toInt256(_minerDebtor.outStandingBalance));
 
-        collateralRate = revaluedCollateralValue * SCALE_FACTOR / outStandingValue;
+        collateralRatio = revaluedCollateralValue * SCALE_FACTOR / outStandingValue;
+        passMinCollateralRatioCheck = collateralRatio >= minCollateralRatio;
+        passMarginBufferedCollateralRatioCheck = collateralRatio >= marginBufferedCollateralRatio;
     }
 
+    function healthCheck(address _debtor) public view returns (int256 collateralRatio, 
+                            bool passMinCollateralRatioCheck,
+                            bool passMarginBufferedCollateralRatioCheck,
+                           int256 interestReserve) {
 
+        IMinerToken.Debtor memory minerDebtor = minerToken.getDebtor(_debtor);
+        DebtorParams memory debtorParams = getDebtorParams(_debtor);
+        int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(quoteToken, _debtor));
+        (collateralRatio, passMinCollateralRatioCheck, passMarginBufferedCollateralRatioCheck, interestReserve) = 
+        healthCheckSimulation(minerDebtor, collateralValueInDebtorContract, debtorParams.minCollateralRatio, debtorParams.marginBufferedCollateralRatio);
+    }
 
 }
