@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.29;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./interface/IDebtorManager.sol";
-import "./Debtor.sol";
+import "./debtor/Debtor.sol";
 import "./interface/IMinerToken.sol";
 import "./interface/IValuationService.sol";
 import "./interface/ICycleUpdater.sol";
@@ -21,8 +21,8 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
     DebtorParams public defaultDebtorParams;
 
     // 2 times of interest rate for safety
-    uint256 public constant SAFE_INTEREST_FACTOR = 12000;
-    int256 public constant SCALE_FACTOR = 10000;
+    uint256 public constant SAFE_INTEREST_BUFFER = 2000; // 20%
+    uint256 public constant SCALE_FACTOR = 10000;
 
     address public quoteToken;
 
@@ -96,7 +96,7 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
         uint256 currentIndex = cycleUpdater.getCurrentCycleIndex();
         require(currentIndex > 2, "DebtorManager: not enough cycles");
         uint256 lastRateFactor = cycleUpdater.getCycle(currentIndex - 1).rateFactor;
-        return _debtFactor * lastRateFactor * SAFE_INTEREST_FACTOR / 10000;
+        return _debtFactor * lastRateFactor * (SCALE_FACTOR + SAFE_INTEREST_BUFFER) / SCALE_FACTOR;
     }
     
     function _estimateFinalizedDebtUsingLastCycleByBalance(uint256 _balance) internal view returns (uint256) {
@@ -114,13 +114,17 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
         } else {
             absInterestReserve = uint256(_interestReserve);
         }
-        uint256 absPrice = valuationService.queryPrice(_inputToken, quoteToken, absInterestReserve);
+        uint256 absPrice = valuationService.querySpotPrice(_inputToken, quoteToken, absInterestReserve);
         if (_interestReserve < 0) {
             return SafeCast.toInt256(absPrice) * -1;
         }
         return SafeCast.toInt256(absPrice);
     }
 
+    //chcek the calcaulation first
+
+    //need to make a safe buffer for interest reserve
+    //check the calculation again for interest value calculation?? Basically what to quote.
     function healthCheckSimulation(IMinerToken.Debtor memory _minerDebtor,
                                 int256 collateralValueInDebtorContract,
                                 int256 minCollateralRatio,
@@ -128,7 +132,7 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                             ) public view returns (int256 collateralRatio, 
                             bool passMinCollateralRatioCheck,
                             bool passMarginBufferedCollateralRatioCheck,
-                           int256 interestReserve) {
+                           int256 interestReserveAdjusted) {
 
         //1. check interest reserve
         (uint256 finalizedDebt, uint256 debtFactor) = cycleUpdater.interestPreview(
@@ -136,15 +140,15 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
             _minerDebtor.timeStamp.lastModifiedCycle, 
             _minerDebtor.timeStamp.lastModifiedTime,
             _minerDebtor.debtFactor);
-        interestReserve = _minerDebtor.interestReserve - 
+        interestReserveAdjusted = _minerDebtor.interestReserve - 
                                          SafeCast.toInt256(finalizedDebt) - 
                                          SafeCast.toInt256(_estimateDebtUsingLastCycleByFactor(debtFactor));
         
         //2. check collateral rate
-        int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(minerToken.interestToken(), interestReserve);
+        int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(minerToken.interestToken(), interestReserveAdjusted);
         int256 outStandingValue = _queryPriceInt256(address(minerToken), SafeCast.toInt256(_minerDebtor.outStandingBalance));
 
-        collateralRatio = revaluedCollateralValue * SCALE_FACTOR / outStandingValue;
+        collateralRatio = revaluedCollateralValue * SafeCast.toInt256(SCALE_FACTOR) / outStandingValue;
         passMinCollateralRatioCheck = collateralRatio >= minCollateralRatio;
         passMarginBufferedCollateralRatioCheck = collateralRatio >= marginBufferedCollateralRatio;
     }
@@ -152,12 +156,12 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
     function healthCheck(address _debtor) public view returns (int256 collateralRatio, 
                             bool passMinCollateralRatioCheck,
                             bool passMarginBufferedCollateralRatioCheck,
-                           int256 interestReserve) {
+                           int256 interestReserveAdjusted) {
 
         IMinerToken.Debtor memory minerDebtor = minerToken.getDebtor(_debtor);
         DebtorParams memory debtorParams = getDebtorParams(_debtor);
-        int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(quoteToken, _debtor));
-        (collateralRatio, passMinCollateralRatioCheck, passMarginBufferedCollateralRatioCheck, interestReserve) = 
+        int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(address(minerToken), quoteToken, _debtor));
+        (collateralRatio, passMinCollateralRatioCheck, passMarginBufferedCollateralRatioCheck, interestReserveAdjusted) = 
         healthCheckSimulation(minerDebtor, collateralValueInDebtorContract, debtorParams.minCollateralRatio, debtorParams.marginBufferedCollateralRatio);
     }
 

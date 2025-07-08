@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.29;
+pragma solidity ^0.8.0;
 
 library AddressArray {
     function find(address[] storage array, address element) internal view returns (bool, uint256) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.29;
+pragma solidity ^0.8.0;
 
 interface IDebtorManager {
 
@@ -17,5 +17,5 @@ interface IDebtorManager {
     function healthCheck(address _debtor) external view returns (int256 collateralRatio, 
                             bool passMinCollateralRatioCheck,
                             bool passMarginBufferedCollateralRatioCheck,
-                            int256 interestReserve);
+                            int256 interestReserveAdjusted);
 }
