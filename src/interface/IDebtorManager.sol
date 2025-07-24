@@ -11,6 +11,7 @@ interface IDebtorManager {
 
     event CreateDebtor(address owner, address debtor);
 
+    function minerToken() external view returns (address);
     function createDebtor() external returns (address);
     function getDebtor(address _owner) external view returns (address);
     function getDebtorParams(address _debtor) external view returns (DebtorParams memory);

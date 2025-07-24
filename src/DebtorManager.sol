@@ -14,7 +14,7 @@ import "./interface/ICycleUpdater.sol";
 
 contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
     
-    IMinerToken minerToken;
+    address public minerToken;
     IValuationService valuationService;
     ICycleUpdater cycleUpdater;
 
@@ -26,7 +26,7 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
 
     address public quoteToken;
 
-    mapping(address => address) private _debtors;
+    mapping(address => address) private _debtorMapping;
 
     mapping(address => DebtorParams) private _customDebtorParams;
 
@@ -38,7 +38,7 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                         int256 _marginBufferedCollateralRatio
                         ) external initializer {
         __Ownable_init(msg.sender);
-        minerToken = IMinerToken(_minerToken);
+        minerToken = _minerToken;
         cycleUpdater = ICycleUpdater(_cycleUpdater);
         quoteToken = _quoteToken;
         valuationService = IValuationService(_valuationService);
@@ -78,16 +78,16 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
     }
 
     function getDebtor(address _owner) external view returns (address) {
-        return _debtors[_owner];
+        return _debtorMapping[_owner];
     }
 
     function createDebtor() external returns (address) {
         address sender = msg.sender;
-        require(_debtors[sender] == address(0), "Factory: debtor already exists");
+        require(_debtorMapping[sender] == address(0), "Factory: debtor already exists");
         bytes32 salt = keccak256(abi.encodePacked(sender, address(this)));
         Debtor debtor = new Debtor{salt: salt}();
-        _debtors[sender] = address(debtor);
-        minerToken.registerDebtor(address(debtor));
+        _debtorMapping[sender] = address(debtor);
+        IMinerToken(minerToken).registerDebtor(address(debtor));
         emit CreateDebtor(sender, address(debtor));
         return address(debtor);
     }
@@ -145,8 +145,8 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                                          SafeCast.toInt256(_estimateDebtUsingLastCycleByFactor(debtFactor));
         
         //2. check collateral rate
-        int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(minerToken.interestToken(), interestReserveAdjusted);
-        int256 outStandingValue = _queryPriceInt256(address(minerToken), SafeCast.toInt256(_minerDebtor.outStandingBalance));
+        int256 revaluedCollateralValue = collateralValueInDebtorContract + _queryPriceInt256(IMinerToken(minerToken).interestToken(), interestReserveAdjusted);
+        int256 outStandingValue = _queryPriceInt256(minerToken, SafeCast.toInt256(_minerDebtor.outStandingBalance));
 
         collateralRatio = revaluedCollateralValue * SafeCast.toInt256(SCALE_FACTOR) / outStandingValue;
         passMinCollateralRatioCheck = collateralRatio >= minCollateralRatio;
@@ -158,7 +158,7 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                             bool passMarginBufferedCollateralRatioCheck,
                            int256 interestReserveAdjusted) {
 
-        IMinerToken.Debtor memory minerDebtor = minerToken.getDebtor(_debtor);
+        IMinerToken.Debtor memory minerDebtor = IMinerToken(minerToken).getDebtor(_debtor);
         DebtorParams memory debtorParams = getDebtorParams(_debtor);
         int256 collateralValueInDebtorContract = SafeCast.toInt256(valuationService.queryCollateralValue(address(minerToken), quoteToken, _debtor));
         (collateralRatio, passMinCollateralRatioCheck, passMarginBufferedCollateralRatioCheck, interestReserveAdjusted) = 

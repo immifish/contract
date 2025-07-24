@@ -224,13 +224,13 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     }
 
     // this can only be called by debtor
-    function removeReserve(uint256 _amount) public {
+    function removeReserve(address _to, uint256 _amount) public {
         address _debtor = _msgSender();
         require(isDebtor(_debtor), "MinerToken: cannot remove reserve from non-debtor");
         Debtor storage debtor = _debtors[_debtor];
         require(debtor.interestReserve >= 0 && uint256(debtor.interestReserve) >= _amount, "MinerToken: insufficient interest reserve");
         debtor.interestReserve -= SafeCast.toInt256(_amount);
-        _interestToken.transfer(_debtor, _amount);
+        _interestToken.transfer(_to, _amount);
         emit RemoveReserve(_debtor, _amount);
     }
     

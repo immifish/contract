@@ -39,7 +39,7 @@ interface IMinerToken {
 
     function mint(address to, uint256 amount) external;
 
-    function removeReserve(uint256 amount) external;
+    function removeReserve(address to, uint256 amount) external;
 
     function addReserve(address debtor, uint256 amount) external;
 
