@@ -113,8 +113,8 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
             );
             creditor.interestFactor = newInterestFactor;
             creditor.interest += epochReward;
-            creditor.timeStamp.lastModifiedTime = block.timestamp;
         }
+        creditor.timeStamp.lastModifiedTime = block.timestamp;
         if (creditor.timeStamp.lastModifiedCycle != _cycleUpdater.getCurrentCycleIndex()) {
             creditor.timeStamp.lastModifiedCycle = _cycleUpdater.getCurrentCycleIndex();
         }
