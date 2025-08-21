@@ -57,6 +57,8 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
     }
 
     // Starts a new cycle, updating the interest factors for the current cycle before starting a new one
+    // @param _currentCycle is the current cycle index. It is just a check to ensure the update is correct.
+    // @param _currentCycleInterest is the interest generated in the current cycle by holding 1 token (not 10**18, just 1)
     function startNewCycle(
         uint256 _currentCycle,
         uint256 _currentCycleInterest

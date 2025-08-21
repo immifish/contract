@@ -81,20 +81,34 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     }
 
     // redirect the interest to designated beneficiary. The beneficiary can claim interest for the settlor
-    function setDesignatedBeneficiary(address _settlor, address _beneficiary) public {
-        require(_settlor != address(0), "MinerToken: settlor cannot be zero address");
+    function setDesignatedBeneficiary(address _creditor, address _beneficiary) public {
+        require(_creditor != address(0), "MinerToken: creditor cannot be zero address");
         require(_beneficiary != address(0), "MinerToken: beneficiary cannot be zero address");
         
-        if (_msgSender() == _settlor || _msgSender() == owner()) {
-            _designatedBeneficiary[_settlor] = _beneficiary;
-            emit DesignatedBeneficiaryUpdated(_settlor, _beneficiary, _msgSender());
+        if (_msgSender() == _creditor || _msgSender() == owner()) {
+            _designatedBeneficiary[_creditor] = _beneficiary;
+            emit DesignatedBeneficiaryUpdated(_creditor, _beneficiary, _msgSender());
         } else {
-            revert("MinerToken: caller must be settlor or owner");
+            revert("MinerToken: caller must be creditor or owner");
         }
     }
 
-    function getDesignatedBeneficiary(address _settlor) public view returns (address) {
-        return _designatedBeneficiary[_settlor];
+    function getDesignatedBeneficiary(address _creditor) public view returns (address) {
+        return _designatedBeneficiary[_creditor];
+    }
+
+    function settleCreditorPreview(address _creditor) public view returns (uint256 claimableInterest) {
+        //address should not be a debtor
+        require(!isDebtor(_creditor), "MinerToken: creditor must not be debtor");
+        Creditor storage creditor = _creditors[_creditor];
+        (uint256 epochReward,) = _cycleUpdater
+            .interestPreview(
+                balanceOf(_creditor),
+                creditor.timeStamp.lastModifiedCycle,
+                creditor.timeStamp.lastModifiedTime,
+                creditor.interestFactor
+            );
+        claimableInterest = creditor.interest + epochReward;
     }
 
     function _settleCreditor(address _creditor) public {
