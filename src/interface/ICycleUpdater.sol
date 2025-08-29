@@ -13,8 +13,8 @@ interface ICycleUpdater {
 
     struct Cycle {
         uint256 startTime;          // the start time of the cycle, updated when this cycle is started
-        uint256 rateFactor;         // the rate factor of the cycle, updated when the cycle is finalized (the next cycle is started)
-        uint256 interestSnapShot;   // the interest snapshot of the cycle, updated when the cycle is finalized (the next cycle is started)
+        uint256 rateFactor;         // the rate factor of the cycle, updated when the cycle is finalized (the next cycle is started). Elevated by SCALING_FACTOR
+        uint256 interestSnapShot;   // the interest snapshot of the cycle, updated when the cycle is finalized (the next cycle is started). Elevated by SCALING_FACTOR
     }
 
     function getCurrentCycleIndex() external view returns (uint256);

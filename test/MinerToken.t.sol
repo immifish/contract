@@ -317,7 +317,8 @@ contract MinerTokenTest is Test {
         vm.stopPrank();
         
         // Advance time and finalize a cycle with per-token interest
-        uint256 interestPerTokenPerDay = 0.05 ether; // interest for holding 1 token over the cycle
+        // Note: interest should be elevated by SCALING_FACTOR (10^12), not by ether (10^18)
+        uint256 interestPerTokenPerDay = 0.05 * 10**12; // interest for holding 1 token over the cycle
         vm.warp(block.timestamp + 1 days);
         cycleUpdater.startNewCycle(0, interestPerTokenPerDay);
         
@@ -349,7 +350,8 @@ contract MinerTokenTest is Test {
         vm.stopPrank();
         
         // Advance time and finalize a cycle with per-token interest
-        uint256 interestPerTokenPerDay = 0.05 ether; // interest for holding 1 token over the cycle
+        // Note: interest should be elevated by SCALING_FACTOR (10^12), not by ether (10^18)
+        uint256 interestPerTokenPerDay = 0.05 * 10**12; // interest for holding 1 token over the cycle
         vm.warp(block.timestamp + 1 days);
         cycleUpdater.startNewCycle(0, interestPerTokenPerDay);
         
@@ -407,7 +409,8 @@ contract MinerTokenTest is Test {
         vm.stopPrank();
         
         // Advance time and finalize a cycle with per-token interest
-        uint256 interestPerTokenPerDay = 0.05 ether; // interest for holding 1 token over the cycle
+        // Note: interest should be elevated by SCALING_FACTOR (10^12), not by ether (10^18)
+        uint256 interestPerTokenPerDay = 0.05 * 10**12; // interest for holding 1 token over the cycle
         vm.warp(block.timestamp + 1 days);
         cycleUpdater.startNewCycle(0, interestPerTokenPerDay);
         

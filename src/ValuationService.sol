@@ -40,8 +40,10 @@ contract ValuationService is Initializable, OwnableUpgradeable, UUPSUpgradeable,
 
     // Set LTV for loan asset and collateral asset. Remember to add case for collateral asset == loan asset
     function setLTV(address _collateralAsset, address _loanAsset, uint256 _LTV, bool _isValid) public onlyOwner {
-        require(_loanAsset != address(0) && _collateralAsset != address(0), "Invalid asset address");
+        require(_collateralAsset != address(0) && _loanAsset != address(0), "Invalid asset address");
         if (_isValid) {
+            if (_collateralAsset == _loanAsset) require(_LTV == SCALE_FACTOR, "Same-asset LTV must be 1x");
+            require(_LTV <= SCALE_FACTOR, "LTV too high");
             LTV[_collateralAsset][_loanAsset] = _LTV;
             // add to whitelist
             (bool hasAsset, ) = whitelist[_loanAsset].find(_collateralAsset);
@@ -82,10 +84,9 @@ contract ValuationService is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         address _quoteToken,
         uint256 _tokenAmount
     ) public view returns (uint256) {
-        if (_collateralAsset == _loanAsset) {
-            return _tokenAmount;
-        }
-        uint256 price = queryRelativePriceViaQuote(_collateralAsset, _loanAsset, _quoteToken, _tokenAmount);
+        uint256 price = _collateralAsset == _loanAsset
+            ? _tokenAmount
+            : queryRelativePriceViaQuote(_collateralAsset, _loanAsset, _quoteToken, _tokenAmount);
         return (price * LTV[_collateralAsset][_loanAsset]) / SCALE_FACTOR;
     }  
 

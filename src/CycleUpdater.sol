@@ -21,7 +21,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
     Cycle[] cycles;
 
     // Constant used for interest calculations to maintain precision
-    uint256 public constant DENOMINATOR = 10 ** 18;
+    uint256 public constant SCALING_FACTOR = 10 ** 12;
 
     constructor() {
         // Disable initializers to prevent the contract from being initialized more than once
@@ -58,7 +58,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
 
     // Starts a new cycle, updating the interest factors for the current cycle before starting a new one
     // @param _currentCycle is the current cycle index. It is just a check to ensure the update is correct.
-    // @param _currentCycleInterest is the interest generated in the current cycle by holding 1 token (not 10**18, just 1)
+    // @param _currentCycleInterest is the interest generated in the current cycle by holding 1 token (not 10**18, just 1). Elevated by SCALING_FACTOR.
     function startNewCycle(
         uint256 _currentCycle,
         uint256 _currentCycleInterest
@@ -91,6 +91,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
         cycles.push(Cycle(block.timestamp, 0, 0));
     }
 
+    // the return value is elevated by SCALING_FACTOR (return to normal)
     function _finalizedInterest(
         uint256 _balance,
         uint256 _lastModifiedCycle,
@@ -104,7 +105,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
             (_factorBeforeUpdate +
                 _balance *
                 (cycles[_lastModifiedCycle + 1].startTime - _lastModifiedTime));
-        return (fullCycleInterest + partCycleInterest) / DENOMINATOR;
+        return (fullCycleInterest + partCycleInterest) / SCALING_FACTOR;
     }
 
 
