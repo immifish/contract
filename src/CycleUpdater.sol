@@ -21,7 +21,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
     Cycle[] cycles;
 
     // Constant used for interest calculations to maintain precision
-    uint256 public constant SCALING_FACTOR = 10 ** 12;
+    uint256 public constant SCALING_FACTOR = 10 ** 20;
 
     constructor() {
         // Disable initializers to prevent the contract from being initialized more than once

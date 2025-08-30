@@ -30,8 +30,9 @@ import "../interface/IDebtorManager.sol";
 import "../interface/IMinerToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract Debtor is IDebtor {
+contract Debtor is IDebtor, ReentrancyGuard {
     using Address for address;
     uint8 public constant VERSION = 1;
 
@@ -80,12 +81,12 @@ contract Debtor is IDebtor {
     }
 
     // execute custom actions via delegatecall
-    function delegateCall(address _action, bytes memory _data) public debtorOwner keepHealthy returns (bytes memory) {
+    function delegateCall(address _action, bytes memory _data) public debtorOwner keepHealthy nonReentrant returns (bytes memory) {
         return _action.functionDelegateCall(_data);
     }
 
     // should be unhealthy before, and after that, the healthy status should be margined
-    function liquidate(address _liquidatorAction, bytes memory _data) public returns (bytes memory) {
+    function liquidate(address _liquidatorAction, bytes memory _data) public nonReentrant returns (bytes memory) {
         (, bool passMinCollateralRatioCheck, , ) = IDebtorManager(debtorManager).healthCheck(address(this));
         require(!passMinCollateralRatioCheck, "Debtor: is healthy before");
         bytes memory result = _liquidatorAction.functionDelegateCall(_data);
