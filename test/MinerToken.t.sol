@@ -27,14 +27,16 @@ contract MinerTokenTest is Test {
     address public creditor1;
     address public creditor2;
     address public beneficiary;
+    address public feeReceiver;
     
     uint256 public constant INITIAL_BALANCE = 1000 * 10**18;
     uint256 public constant MINT_AMOUNT = 100 * 10**18;
     uint256 public constant RESERVE_AMOUNT = 50 * 10**18;
     uint256 public constant CLAIM_AMOUNT = 25 * 10**18;
+    uint256 public constant FEE_RATE = 250; // 2.5% fee (250/10000)
     
     event RegisterDebtor(address debtor);
-    event Mint(address byDebtor, address to, uint256 amount);
+    event Mint(address byDebtor, address to, uint256 amount, uint256 fee);
     event Burn(address from, address forDebtor, uint256 amount);
     event Claim(address holder, address to, uint256 amount);
     event RemoveReserve(address debtor, uint256 amount);
@@ -48,6 +50,7 @@ contract MinerTokenTest is Test {
         creditor1 = makeAddr("creditor1");
         creditor2 = makeAddr("creditor2");
         beneficiary = makeAddr("beneficiary");
+        feeReceiver = makeAddr("feeReceiver");
         
         // Deploy contracts
         interestToken = new MockInterestToken();
@@ -62,8 +65,8 @@ contract MinerTokenTest is Test {
         
         minerToken = new MinerToken();
         
-        // Initialize contracts
-        minerToken.initialize("Miner Token", "MINER", 18, address(interestToken), address(cycleUpdater));
+        // Initialize contracts with fee parameters
+        minerToken.initialize("Miner Token", "MINER", 18, address(interestToken), address(cycleUpdater), feeReceiver, FEE_RATE);
         
         // Set debtor manager to this contract for testing
         minerToken.setDebtorManager(address(this));
@@ -85,6 +88,8 @@ contract MinerTokenTest is Test {
         assertEq(minerToken.interestToken(), address(interestToken));
         assertEq(minerToken.cycleUpdater(), address(cycleUpdater));
         assertEq(minerToken.owner(), owner);
+        assertEq(minerToken._feeReceiver(), feeReceiver);
+        assertEq(minerToken._feeRate(), FEE_RATE);
     }
     
     function test_RegisterDebtor() public {
@@ -117,17 +122,61 @@ contract MinerTokenTest is Test {
         vm.stopPrank();
     }
     
-    function test_Mint_ByDebtor() public {
+    function test_Mint_ByDebtor_WithFee() public {
         vm.startPrank(owner);
         minerToken.registerDebtor(debtor1);
         vm.stopPrank();
+        
+        uint256 expectedFee = MINT_AMOUNT * FEE_RATE / 10000;
+        uint256 expectedAmount = MINT_AMOUNT - expectedFee;
         
         vm.startPrank(debtor1);
         minerToken.mint(creditor1, MINT_AMOUNT);
         vm.stopPrank();
         
-        assertEq(minerToken.balanceOf(creditor1), MINT_AMOUNT);
+        assertEq(minerToken.balanceOf(creditor1), expectedAmount);
+        assertEq(minerToken.balanceOf(feeReceiver), expectedFee);
         IMinerToken.Debtor memory debtor = minerToken.getDebtor(debtor1);
+        assertEq(debtor.outStandingBalance, MINT_AMOUNT); // Total amount including fee
+    }
+    
+    function test_Mint_ByDebtor_ZeroFee() public {
+        // Deploy a new token with zero fee rate for this test
+        MinerToken zeroFeeToken = new MinerToken();
+        zeroFeeToken.initialize("Zero Fee Token", "ZFT", 18, address(interestToken), address(cycleUpdater), feeReceiver, 0);
+        zeroFeeToken.setDebtorManager(address(this));
+        
+        vm.startPrank(owner);
+        zeroFeeToken.registerDebtor(debtor1);
+        vm.stopPrank();
+        
+        vm.startPrank(debtor1);
+        zeroFeeToken.mint(creditor1, MINT_AMOUNT);
+        vm.stopPrank();
+        
+        assertEq(zeroFeeToken.balanceOf(creditor1), MINT_AMOUNT);
+        assertEq(zeroFeeToken.balanceOf(feeReceiver), 0);
+        IMinerToken.Debtor memory debtor = zeroFeeToken.getDebtor(debtor1);
+        assertEq(debtor.outStandingBalance, MINT_AMOUNT);
+    }
+    
+    function test_Mint_ByDebtor_MaxFee() public {
+        // Deploy a new token with 100% fee rate for this test
+        MinerToken maxFeeToken = new MinerToken();
+        maxFeeToken.initialize("Max Fee Token", "MFT", 18, address(interestToken), address(cycleUpdater), feeReceiver, 10000);
+        maxFeeToken.setDebtorManager(address(this));
+        
+        vm.startPrank(owner);
+        maxFeeToken.registerDebtor(debtor1);
+        vm.stopPrank();
+        
+        vm.startPrank(debtor1);
+        maxFeeToken.mint(creditor1, MINT_AMOUNT);
+        vm.stopPrank();
+        
+        assertEq(maxFeeToken.balanceOf(creditor1), 0);
+        assertEq(maxFeeToken.balanceOf(feeReceiver), MINT_AMOUNT);
+        IMinerToken.Debtor memory debtor = maxFeeToken.getDebtor(debtor1);
         assertEq(debtor.outStandingBalance, MINT_AMOUNT);
     }
     
@@ -174,30 +223,49 @@ contract MinerTokenTest is Test {
         minerToken.mint(creditor1, MINT_AMOUNT);
         vm.stopPrank();
         
+        uint256 expectedFee = MINT_AMOUNT * FEE_RATE / 10000;
+        uint256 expectedAmount = MINT_AMOUNT - expectedFee;
+        
         uint256 initialBalance = minerToken.balanceOf(creditor1);
         uint256 initialOutstanding = minerToken.getDebtor(debtor1).outStandingBalance;
         
         vm.startPrank(creditor1);
-        minerToken.transfer(debtor1, MINT_AMOUNT);
+        minerToken.transfer(debtor1, expectedAmount);
         vm.stopPrank();
         
-        assertEq(minerToken.balanceOf(creditor1), initialBalance - MINT_AMOUNT);
+        assertEq(minerToken.balanceOf(creditor1), initialBalance - expectedAmount);
         IMinerToken.Debtor memory debtor = minerToken.getDebtor(debtor1);
-        assertEq(debtor.outStandingBalance, initialOutstanding - MINT_AMOUNT);
+        assertEq(debtor.outStandingBalance, initialOutstanding - expectedAmount);
     }
     
     function test_Burn_InsufficientOutstandingBalance() public {
+        // Use a zero-fee token for this test to avoid fee complications
+        MinerToken zeroFeeToken = new MinerToken();
+        zeroFeeToken.initialize("Zero Fee Token", "ZFT", 18, address(interestToken), address(cycleUpdater), feeReceiver, 0);
+        zeroFeeToken.setDebtorManager(address(this));
+        
         vm.startPrank(owner);
-        minerToken.registerDebtor(debtor1);
+        zeroFeeToken.registerDebtor(debtor1);
         vm.stopPrank();
         
+        // Mint tokens to creditor1 (no fee)
         vm.startPrank(debtor1);
-        minerToken.mint(creditor1, MINT_AMOUNT);
+        zeroFeeToken.mint(creditor1, MINT_AMOUNT);
         vm.stopPrank();
         
+        // creditor1 now has MINT_AMOUNT tokens, debtor1 outstanding balance is MINT_AMOUNT
+        
+        // Burn some tokens to reduce outstanding balance
+        vm.startPrank(creditor1);
+        zeroFeeToken.transfer(debtor1, MINT_AMOUNT / 2);
+        vm.stopPrank();
+        
+        // Outstanding balance is now MINT_AMOUNT / 2, creditor1 still has MINT_AMOUNT / 2
+        
+        // Try to burn more than the remaining outstanding balance
         vm.startPrank(creditor1);
         vm.expectRevert("MinerToken: insufficient outStandingBalance");
-        minerToken.transfer(debtor1, MINT_AMOUNT + 1);
+        zeroFeeToken.transfer(debtor1, (MINT_AMOUNT / 2) + 1);
         vm.stopPrank();
     }
     
@@ -449,6 +517,8 @@ contract MinerTokenTest is Test {
         minerToken.mint(creditor2, INITIAL_BALANCE);
         vm.stopPrank();
         
+        // Fee calculations not needed for this test since we're just testing transfers between creditors
+        
         uint256 initialBalance1 = minerToken.balanceOf(creditor1);
         uint256 initialBalance2 = minerToken.balanceOf(creditor2);
         
@@ -483,5 +553,20 @@ contract MinerTokenTest is Test {
         vm.stopPrank();
         
         assertTrue(minerToken.isDebtor(debtor1));
+    }
+
+    function test_Mint_EventEmission() public {
+        vm.startPrank(owner);
+        minerToken.registerDebtor(debtor1);
+        vm.stopPrank();
+        
+        uint256 expectedFee = MINT_AMOUNT * FEE_RATE / 10000;
+        uint256 expectedAmount = MINT_AMOUNT - expectedFee;
+        
+        vm.startPrank(debtor1);
+        vm.expectEmit(true, true, true, true);
+        emit Mint(debtor1, creditor1, expectedAmount, expectedFee);
+        minerToken.mint(creditor1, MINT_AMOUNT);
+        vm.stopPrank();
     }
 }

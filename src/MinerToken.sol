@@ -35,6 +35,10 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
     // Decimals for the token
     uint8 _decimals;
 
+    // Platform fee
+    address public _feeReceiver;
+    uint256 public _feeRate; // 10000 = 100%
+
     function isDebtor(address _debtor) public view returns (bool) {
         return _debtors[_debtor].timeStamp.lastModifiedTime > 0;
     }
@@ -49,13 +53,17 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         string memory symbol_,
         uint8 decimals_,
         address interestToken_,
-        address cycleUpdater_
+        address cycleUpdater_,
+        address feeReceiver_,
+        uint256 feeRate_
     ) public initializer {
         __ERC20_init(name_, symbol_);
         _decimals = decimals_;
         __Ownable_init(msg.sender);   // Initialize the Ownable contract with the deployer as the owner
         _interestToken = IERC20(interestToken_); // Set the interest token address
         _cycleUpdater = ICycleUpdater(cycleUpdater_);
+        _feeReceiver = feeReceiver_;
+        _feeRate = feeRate_;
     }
 
     // Override the decimals function to return the custom decimals value
@@ -206,7 +214,6 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
             _settleCreditor(to);
             _debtors[from].outStandingBalance += value;
             super._update(address(0), to, value);
-            emit Mint(from, to, value);
         } else {
             // from is creditor
             _settleCreditor(from);
@@ -234,7 +241,13 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         require(isDebtor(_debtor), "MinerToken: cannot mint by a non-debtor");
         require(_to != address(0), "MinerToken: cannot mint to zero address");
         require(!isDebtor(_to), "MinerToken: cannot mint to debtor");
-        _update(_debtor, _to, _amount);
+        uint256 fee = _amount * _feeRate / 10000;
+        uint256 amount = _amount - fee;
+        _update(_debtor, _to, amount);
+        if (fee > 0) {
+            _update(_debtor, _feeReceiver, fee);
+        }
+        emit Mint(_debtor, _to, amount, fee);
     }
 
     // this can only be called by debtor

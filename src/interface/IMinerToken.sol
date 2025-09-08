@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 interface IMinerToken {
 
     event RegisterDebtor(address debtor);
-    event Mint(address byDebtor, address to, uint256 amount);
+    event Mint(address byDebtor, address to, uint256 amount, uint256 fee);
     event Burn(address from, address forDebtor, uint256 amount);
     event Claim(address holder, address to, uint256 amount);
     event RemoveReserve(address debtor, uint256 amount);
