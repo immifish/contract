@@ -10,7 +10,15 @@ export { BaseContract } from './contracts/BaseContract.js';
 export { ContractFactory } from './utils/contractFactory.js';
 
 // Constants
-export { CONTRACT_ADDRESSES, NETWORKS, DEFAULT_NETWORK } from './utils/constants.js';
+export { 
+  CONTRACT_ADDRESSES, 
+  NETWORKS, 
+  DEFAULT_NETWORK,
+  getMinerTokenAddress,
+  getAllMinerTokenAddresses,
+  getAvailableMinerTokenNames,
+  addMinerToken
+} from './utils/constants.js';
 
 // Helper functions
 export { 
