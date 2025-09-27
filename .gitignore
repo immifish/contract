@@ -14,3 +14,8 @@ docs/
 /node_modules
 
 /old_design
+
+# JavaScript SDK build outputs
+js/dist/
+js/coverage/
+js/node_modules/

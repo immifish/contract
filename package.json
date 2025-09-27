@@ -1,14 +1,24 @@
 {
-  "name": "immi",
+  "name": "immi-contract",
   "version": "1.0.0",
-  "description": "**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**",
+  "description": "Immi Protocol Smart Contracts and JavaScript SDK",
   "main": "index.js",
+  "workspaces": [
+    "js"
+  ],
   "directories": {
     "lib": "lib",
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:contracts": "forge build",
+    "build:js": "cd js && npm run build",
+    "build": "npm run build:contracts && npm run build:js",
+    "test:contracts": "forge test",
+    "test:js": "cd js && npm test",
+    "clean": "cd js && npm run clean",
+    "install:js": "cd js && npm install"
   },
   "author": "",
   "license": "ISC",
