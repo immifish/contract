@@ -2,16 +2,19 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "./interface/ICycleUpdater.sol";
-import "./interface/IMinerToken.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ICycleUpdater} from "./interface/ICycleUpdater.sol";
+import {IMinerToken} from "./interface/IMinerToken.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgradeable {
     using Address for address;
+    using SafeERC20 for IERC20;
 
     event DesignatedBeneficiaryUpdated(address indexed settlor, address indexed beneficiary, address indexed operator);
 
@@ -64,11 +67,6 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         _cycleUpdater = ICycleUpdater(cycleUpdater_);
         _feeReceiver = feeReceiver_;
         _feeRate = feeRate_;
-    }
-
-    // Override the decimals function to return the custom decimals value
-    function decimals() public view override returns (uint8) {
-        return _decimals;
     }
 
     function interestToken() public view override returns (address) {
@@ -199,7 +197,7 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         unchecked {
             creditor.interest -= _amount;
         }
-        _interestToken.transfer(_to, _amount);
+        _interestToken.safeTransfer(_to, _amount);
         emit Claim(_creditor, _to, _amount);
     }
 
@@ -257,14 +255,14 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         Debtor storage debtor = _debtors[_debtor];
         require(debtor.interestReserve >= 0 && uint256(debtor.interestReserve) >= _amount, "MinerToken: insufficient interest reserve");
         debtor.interestReserve -= SafeCast.toInt256(_amount);
-        _interestToken.transfer(_to, _amount);
+        _interestToken.safeTransfer(_to, _amount);
         emit RemoveReserve(_debtor, _amount);
     }
     
     // no need to settle for saving gas
     function addReserve(address _debtor, uint256 _amount) public {
         require(isDebtor(_debtor), "MinerToken: cannot add reserve to non-debtor");
-        _interestToken.transferFrom(_msgSender(), address(this), _amount);
+        _interestToken.safeTransferFrom(_msgSender(), address(this), _amount);
         _debtors[_debtor].interestReserve += SafeCast.toInt256(_amount);
         emit AddReserve(_debtor, _amount);
     }

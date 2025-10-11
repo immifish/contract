@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
-import "../src/MinerToken.sol";
-import "../src/CycleUpdater.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Test} from "forge-std/Test.sol";
+import {MinerToken, IMinerToken} from "../src/MinerToken.sol";
+import {CycleUpdater} from "../src/CycleUpdater.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // Mock ERC20 token for testing interest
 contract MockInterestToken is ERC20 {

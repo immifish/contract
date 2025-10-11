@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
-import "../src/CycleUpdater.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
+import {CycleUpdater} from "../src/CycleUpdater.sol";
 
 contract MockCycleUpdaterV2 is CycleUpdater {
     uint256 public newVariable = 42;

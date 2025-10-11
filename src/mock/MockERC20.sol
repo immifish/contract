@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title MockERC20
 /// @notice Lightweight ERC20 token for testing/dev, configurable decimals, with owner-only mint/burn.
 /// @dev Intended for use as mock assets like WBTC (8 decimals) or USDC (6 decimals).
 contract MockERC20 is ERC20, Ownable {
-    uint8 private immutable _customDecimals;
+    uint8 private immutable CUSTOM_DECIMALS;
 
     /// @param name_ Token name
     /// @param symbol_ Token symbol
@@ -24,14 +24,14 @@ contract MockERC20 is ERC20, Ownable {
         uint256 initialSupply
     ) ERC20(name_, symbol_) Ownable(initialOwner) {
         require(initialOwner != address(0), "owner is zero");
-        _customDecimals = decimals_;
+        CUSTOM_DECIMALS = decimals_;
         if (initialSupply > 0) {
             _mint(initialOwner, initialSupply);
         }
     }
 
     function decimals() public view override returns (uint8) {
-        return _customDecimals;
+        return CUSTOM_DECIMALS;
     }
 
     /// @notice Mint tokens to an address. Only owner can call.

@@ -25,32 +25,34 @@
 
 pragma solidity ^0.8.0;
 
-import "./interface/IDebtor.sol";
-import "../interface/IDebtorManager.sol";
-import "../interface/IMinerToken.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IDebtor} from "./interface/IDebtor.sol";
+import {IDebtorManager} from "../interface/IDebtorManager.sol";
+import {IMinerToken} from "../interface/IMinerToken.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract Debtor is IDebtor, ReentrancyGuard {
     using Address for address;
+    using SafeERC20 for IERC20;
     uint8 public constant VERSION = 1;
 
-    address public immutable debtorManager;
-    address public immutable minerToken;
+    address public immutable DEBTOR_MANAGER;
+    address public immutable MINER_TOKEN;
 
     constructor() {
-        debtorManager = msg.sender;
-        minerToken = IDebtorManager(debtorManager).minerToken();
+        DEBTOR_MANAGER = msg.sender;
+        MINER_TOKEN = IDebtorManager(DEBTOR_MANAGER).minerToken();
     }
 
     modifier debtorOwner() {
-        require(address(this) == IDebtorManager(debtorManager).getDebtor(msg.sender), "Debtor: caller is not the owner");
+        require(address(this) == IDebtorManager(DEBTOR_MANAGER).getDebtor(msg.sender), "Debtor: caller is not the owner");
         _;
     }
 
     function _isHealthy() internal view returns (bool) {
-        (, bool passMinCollateralRatioCheck, , int256 interestReserveAdjusted) = IDebtorManager(debtorManager).healthCheck(address(this));
+        (, bool passMinCollateralRatioCheck, , int256 interestReserveAdjusted) = IDebtorManager(DEBTOR_MANAGER).healthCheck(address(this));
         return passMinCollateralRatioCheck && interestReserveAdjusted >= 0;
     }
 
@@ -61,7 +63,7 @@ contract Debtor is IDebtor, ReentrancyGuard {
     }
 
     function addReserve(uint256 _amount) public {
-        IMinerToken(minerToken).addReserve(address(this), _amount);
+        IMinerToken(MINER_TOKEN).addReserve(address(this), _amount);
     }
 
     //burn, which is just transfer token to address(this)
@@ -69,15 +71,19 @@ contract Debtor is IDebtor, ReentrancyGuard {
     //add collateral, which is just transfer asset (that counts) to address(this)
 
     function removeReserve(address _to, uint256 _amount) public debtorOwner keepHealthy{
-        IMinerToken(minerToken).removeReserve(_to, _amount);
+        IMinerToken(MINER_TOKEN).removeReserve(_to, _amount);
     }
 
     function mint(uint256 _amount) public debtorOwner keepHealthy{
-        IMinerToken(minerToken).mint(address(this), _amount);
+        IMinerToken(MINER_TOKEN).mint(address(this), _amount);
     }
 
     function removeCollateral(address _token, address _to, uint256 _amount) public debtorOwner keepHealthy{
-        IERC20(_token).transfer(_to, _amount);
+        IERC20(_token).safeTransfer(_to, _amount);
+    }
+
+    function debtorManager() external view returns (address) {
+        return DEBTOR_MANAGER;
     }
 
     // execute custom actions via delegatecall
@@ -87,10 +93,10 @@ contract Debtor is IDebtor, ReentrancyGuard {
 
     // should be unhealthy before, and after that, the healthy status should be margined
     function liquidate(address _liquidatorAction, bytes memory _data) public nonReentrant returns (bytes memory) {
-        (, bool passMinCollateralRatioCheck, , ) = IDebtorManager(debtorManager).healthCheck(address(this));
+        (, bool passMinCollateralRatioCheck, , ) = IDebtorManager(DEBTOR_MANAGER).healthCheck(address(this));
         require(!passMinCollateralRatioCheck, "Debtor: is healthy before");
         bytes memory result = _liquidatorAction.functionDelegateCall(_data);
-        (, , bool passMarginBufferedCollateralRatioCheck, int256 interestReserveAdjusted) = IDebtorManager(debtorManager).healthCheck(address(this));
+        (, , bool passMarginBufferedCollateralRatioCheck, int256 interestReserveAdjusted) = IDebtorManager(DEBTOR_MANAGER).healthCheck(address(this));
         require(passMarginBufferedCollateralRatioCheck && interestReserveAdjusted >= 0, "Debtor: not margined after");
         return result;
     }
