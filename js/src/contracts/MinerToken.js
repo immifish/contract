@@ -36,7 +36,8 @@ export class MinerToken extends BaseContract {
           lastModifiedTime: debtor.timeStamp.lastModifiedTime.toString()
         },
         outStandingBalance: formatTokenAmount(debtor.outStandingBalance),
-        debtFactor: debtor.debtFactor.toString()
+        debtFactor: debtor.debtFactor.toString(),
+        interestReserve: debtor.interestReserve.toString()
       };
     } catch (error) {
       throw new Error(`Failed to get debtor info: ${error.message}`);
@@ -44,37 +45,16 @@ export class MinerToken extends BaseContract {
   }
 
   /**
-   * Get creditor information
-   * @param {string} creditorAddress - Creditor address
-   * @returns {Promise<Object>} Creditor information
-   */
-  async getCreditor(creditorAddress) {
-    try {
-      const creditor = await this.contract.getCreditor(creditorAddress);
-      return {
-        timeStamp: {
-          lastModifiedCycle: creditor.timeStamp.lastModifiedCycle.toString(),
-          lastModifiedTime: creditor.timeStamp.lastModifiedTime.toString()
-        },
-        interestFactor: creditor.interestFactor.toString(),
-        interest: formatTokenAmount(creditor.interest)
-      };
-    } catch (error) {
-      throw new Error(`Failed to get creditor info: ${error.message}`);
-    }
-  }
-
-  /**
-   * Mint tokens for a debtor
-   * @param {string} debtorAddress - Debtor address
+   * Mint tokens to a non-debtor recipient (caller must be a debtor)
+   * @param {string} to - Recipient address
    * @param {string} amount - Amount to mint
    * @param {Object} options - Transaction options
    * @returns {Promise<Object>} Transaction result
    */
-  async mint(debtorAddress, amount, options = {}) {
+  async mint(to, amount, options = {}) {
     try {
       const parsedAmount = parseTokenAmount(amount);
-      const tx = await this.contract.mint(debtorAddress, parsedAmount, options);
+      const tx = await this.contract.mint(to, parsedAmount, options);
       return {
         hash: tx.hash,
         wait: () => this.waitForTransaction(tx.hash)
@@ -85,40 +65,69 @@ export class MinerToken extends BaseContract {
   }
 
   /**
-   * Burn tokens
-   * @param {string} amount - Amount to burn
-   * @param {Object} options - Transaction options
-   * @returns {Promise<Object>} Transaction result
-   */
-  async burn(amount, options = {}) {
-    try {
-      const parsedAmount = parseTokenAmount(amount);
-      const tx = await this.contract.burn(parsedAmount, options);
-      return {
-        hash: tx.hash,
-        wait: () => this.waitForTransaction(tx.hash)
-      };
-    } catch (error) {
-      throw new Error(`Failed to burn tokens: ${error.message}`);
-    }
-  }
-
-  /**
-   * Claim interest
+   * Claim interest for a creditor (caller must be creditor or designated beneficiary)
+   * @param {string} creditor - Creditor address
+   * @param {string} to - Recipient address for interest token
    * @param {string} amount - Amount to claim
    * @param {Object} options - Transaction options
    * @returns {Promise<Object>} Transaction result
    */
-  async claim(amount, options = {}) {
+  async claim(creditor, to, amount, options = {}) {
     try {
       const parsedAmount = parseTokenAmount(amount);
-      const tx = await this.contract.claim(parsedAmount, options);
+      const tx = await this.contract.claim(creditor, to, parsedAmount, options);
       return {
         hash: tx.hash,
         wait: () => this.waitForTransaction(tx.hash)
       };
     } catch (error) {
       throw new Error(`Failed to claim interest: ${error.message}`);
+    }
+  }
+
+  /**
+   * Set designated beneficiary for a creditor
+   * @param {string} creditor - Creditor address
+   * @param {string} beneficiary - Beneficiary address
+   * @param {Object} options - Transaction options
+   * @returns {Promise<Object>} Transaction result
+   */
+  async setDesignatedBeneficiary(creditor, beneficiary, options = {}) {
+    try {
+      const tx = await this.contract.setDesignatedBeneficiary(creditor, beneficiary, options);
+      return {
+        hash: tx.hash,
+        wait: () => this.waitForTransaction(tx.hash)
+      };
+    } catch (error) {
+      throw new Error(`Failed to set designated beneficiary: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get designated beneficiary for a creditor
+   * @param {string} creditor - Creditor address
+   * @returns {Promise<string>} Beneficiary address
+   */
+  async getDesignatedBeneficiary(creditor) {
+    try {
+      return await this.contract.getDesignatedBeneficiary(creditor);
+    } catch (error) {
+      throw new Error(`Failed to get designated beneficiary: ${error.message}`);
+    }
+  }
+
+  /**
+   * Preview claimable interest for creditor
+   * @param {string} creditor - Creditor address
+   * @returns {Promise<string>} Claimable interest amount
+   */
+  async settleCreditorPreview(creditor) {
+    try {
+      const amount = await this.contract.settleCreditorPreview(creditor);
+      return formatTokenAmount(amount);
+    } catch (error) {
+      throw new Error(`Failed to preview creditor settlement: ${error.message}`);
     }
   }
 

@@ -9,39 +9,83 @@ export class DebtorManager extends BaseContract {
   }
 
   /**
-   * Register a new debtor
-   * @param {string} debtorAddress - Debtor address
+   * Create a new debtor contract for caller
    * @param {Object} options - Transaction options
    * @returns {Promise<Object>} Transaction result
    */
-  async registerDebtor(debtorAddress, options = {}) {
+  async createDebtor(options = {}) {
     try {
-      const tx = await this.contract.registerDebtor(debtorAddress, options);
+      const tx = await this.contract.createDebtor(options);
       return {
         hash: tx.hash,
         wait: () => this.waitForTransaction(tx.hash)
       };
     } catch (error) {
-      throw new Error(`Failed to register debtor: ${error.message}`);
+      throw new Error(`Failed to create debtor: ${error.message}`);
     }
   }
 
   /**
-   * Update debtor parameters
-   * @param {string} debtorAddress - Debtor address
-   * @param {Object} params - Debtor parameters
+   * Set valuation service address (owner only)
+   * @param {string} valuationService - Address of valuation service
    * @param {Object} options - Transaction options
    * @returns {Promise<Object>} Transaction result
    */
-  async updateDebtorParams(debtorAddress, params, options = {}) {
+  async setValuationService(valuationService, options = {}) {
     try {
-      const tx = await this.contract.updateDebtorParams(debtorAddress, params, options);
+      const tx = await this.contract.setValuationService(valuationService, options);
       return {
         hash: tx.hash,
         wait: () => this.waitForTransaction(tx.hash)
       };
     } catch (error) {
-      throw new Error(`Failed to update debtor params: ${error.message}`);
+      throw new Error(`Failed to set valuation service: ${error.message}`);
+    }
+  }
+
+  /**
+   * Set default debtor params (owner only)
+   * @param {{minCollateralRatio: string, marginBufferedCollateralRatio: string}} params - Default params
+   * @param {Object} options - Transaction options
+   * @returns {Promise<Object>} Transaction result
+   */
+  async setDefaultDebtorParams(params, options = {}) {
+    try {
+      const tx = await this.contract.setDefaultDebtorParams({
+        minCollateralRatio: params.minCollateralRatio,
+        marginBufferedCollateralRatio: params.marginBufferedCollateralRatio
+      }, options);
+      return {
+        hash: tx.hash,
+        wait: () => this.waitForTransaction(tx.hash)
+      };
+    } catch (error) {
+      throw new Error(`Failed to set default debtor params: ${error.message}`);
+    }
+  }
+
+  /**
+   * Set custom debtor params for a debtor (owner only)
+   * @param {string} debtor - Debtor address
+   * @param {string} minCollateralRatio - Min collateral ratio
+   * @param {string} marginBufferedCollateralRatio - Buffered collateral ratio
+   * @param {Object} options - Transaction options
+   * @returns {Promise<Object>} Transaction result
+   */
+  async setCustomDebtorParams(debtor, minCollateralRatio, marginBufferedCollateralRatio, options = {}) {
+    try {
+      const tx = await this.contract.setCustomDebtorParams(
+        debtor,
+        minCollateralRatio,
+        marginBufferedCollateralRatio,
+        options
+      );
+      return {
+        hash: tx.hash,
+        wait: () => this.waitForTransaction(tx.hash)
+      };
+    } catch (error) {
+      throw new Error(`Failed to set custom debtor params: ${error.message}`);
     }
   }
 
@@ -79,52 +123,34 @@ export class DebtorManager extends BaseContract {
   }
 
   /**
-   * Calculate collateral ratio
-   * @param {string} debtorAddress - Debtor address
-   * @returns {Promise<string>} Collateral ratio
+   * Get debtor contract address for an owner
+   * @param {string} owner - owner address
+   * @returns {Promise<string>} Debtor contract address
    */
-  async calculateCollateralRatio(debtorAddress) {
+  async getDebtor(owner) {
     try {
-      const ratio = await this.contract.calculateCollateralRatio(debtorAddress);
-      return ratio.toString();
+      return await this.contract.getDebtor(owner);
     } catch (error) {
-      throw new Error(`Failed to calculate collateral ratio: ${error.message}`);
+      throw new Error(`Failed to get debtor: ${error.message}`);
     }
   }
 
   /**
-   * Get miner token address
-   * @returns {Promise<string>} Miner token address
+   * Run health check for debtor
+   * @param {string} debtor - Debtor address
+   * @returns {Promise<{collateralRatio: string, passMinCollateralRatioCheck: boolean, passMarginBufferedCollateralRatioCheck: boolean, interestReserveAdjusted: string}>}
    */
-  async getMinerToken() {
+  async healthCheck(debtor) {
     try {
-      return await this.contract.minerToken();
+      const result = await this.contract.healthCheck(debtor);
+      return {
+        collateralRatio: result[0].toString(),
+        passMinCollateralRatioCheck: result[1],
+        passMarginBufferedCollateralRatioCheck: result[2],
+        interestReserveAdjusted: result[3].toString()
+      };
     } catch (error) {
-      throw new Error(`Failed to get miner token: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get valuation service address
-   * @returns {Promise<string>} Valuation service address
-   */
-  async getValuationService() {
-    try {
-      return await this.contract.valuationService();
-    } catch (error) {
-      throw new Error(`Failed to get valuation service: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get quote token address
-   * @returns {Promise<string>} Quote token address
-   */
-  async getQuoteToken() {
-    try {
-      return await this.contract.quoteToken();
-    } catch (error) {
-      throw new Error(`Failed to get quote token: ${error.message}`);
+      throw new Error(`Failed to run health check: ${error.message}`);
     }
   }
 }

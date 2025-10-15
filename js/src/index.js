@@ -4,6 +4,7 @@
 export { MinerToken } from './contracts/MinerToken.js';
 export { ValuationService } from './contracts/ValuationService.js';
 export { DebtorManager } from './contracts/DebtorManager.js';
+export { MinerOracle } from './contracts/MinerOracle.js';
 export { BaseContract } from './contracts/BaseContract.js';
 
 // Utility classes
