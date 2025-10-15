@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IMinerOracle} from "./interface/IMinerOracle.sol";
 
-abstract contract MinerOracle is Initializable, OwnableUpgradeable, IMinerOracle {
+contract MinerOracle is Initializable, OwnableUpgradeable, IMinerOracle {
 
     // currently it is for both mint price and liquidate price
     mapping(address => int256) public price;
