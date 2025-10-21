@@ -7,6 +7,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {CycleUpdater} from "../src/CycleUpdater.sol";
 import {MinerOracle} from "../src/MinerOracle.sol";
 import {MinerToken} from "../src/MinerToken.sol";
+import {Valuation} from "../src/Valuation.sol";
+import {DebtorManager} from "../src/DebtorManager.sol";
 import {MockERC20} from "../src/mock/MockERC20.sol";
 
 contract TestDeployCycleUpdater is Script {
@@ -67,7 +69,7 @@ contract TestFBTC10 is Script {
         MinerToken implementationContract = new MinerToken();
         address receiver = vm.envAddress("TEST_FEE_RECEIVER_ADDRESS");
         address wbtc = vm.envAddress("TEST_WBTC_ADDRESS");
-        address cycleUpdater = vm.envAddress("TEST_CYCLE_UPDATER_PROXY_ADDRESS");
+        address cycleUpdater = vm.envAddress("TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS");
 
         // Prepare initializer calldata for UUPS proxy
         // Parameters: name, symbol, decimals, interestToken, cycleUpdater, feeReceiver, feeRate
@@ -116,5 +118,79 @@ contract TestDeployWBTC is Script {
         token = address(interestToken);
 
         console2.log("Interest Token deployed at:", token);
+    }
+}
+
+contract TestDeployValuation is Script {
+    function run() external returns (address implementation, address proxy) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy implementation
+        Valuation implementationContract = new Valuation();
+        address minerOracle = vm.envAddress("TEST_MINER_ORACLE_PROXY_ADDRESS");
+
+        // Prepare initializer calldata for UUPS proxy
+        bytes memory initCalldata = abi.encodeWithSelector(Valuation.initialize.selector, minerOracle);
+
+        // Deploy ERC1967Proxy pointing to implementation with initializer
+        ERC1967Proxy proxyContract = new ERC1967Proxy(address(implementationContract), initCalldata);
+
+        vm.stopBroadcast();
+
+        implementation = address(implementationContract);
+        proxy = address(proxyContract);
+
+        console2.log("Valuation implementation:", implementation);
+        console2.log("Valuation proxy:", proxy);
+    }
+}
+
+contract TestDeployDebtorManagerForFBTC10 is Script {
+    function run() external returns (address implementation, address proxy) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy implementation
+        DebtorManager implementationContract = new DebtorManager();
+        
+        // Get environment variables for dependencies
+        address minerToken = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+        address cycleUpdater = vm.envAddress("TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS");
+        address valuationService = vm.envAddress("TEST_VALUATION_PROXY_ADDRESS");
+        
+        // Set default collateral ratios (scaled by 10000)
+        // minCollateralRatio: 120% = 12000/10000
+        // marginBufferedCollateralRatio: 150% = 15000/10000
+        int256 minCollateralRatio = 12000;
+        int256 marginBufferedCollateralRatio = 15000;
+
+        // Prepare initializer calldata for UUPS proxy
+        bytes memory initCalldata = abi.encodeWithSelector(
+            DebtorManager.initialize.selector,
+            minerToken,
+            cycleUpdater,
+            valuationService,
+            minCollateralRatio,
+            marginBufferedCollateralRatio
+        );
+
+        // Deploy ERC1967Proxy pointing to implementation with initializer
+        ERC1967Proxy proxyContract = new ERC1967Proxy(address(implementationContract), initCalldata);
+
+        vm.stopBroadcast();
+
+        implementation = address(implementationContract);
+        proxy = address(proxyContract);
+
+        console2.log("DebtorManager implementation:", implementation);
+        console2.log("DebtorManager proxy:", proxy);
+        console2.log("MinerToken address:", minerToken);
+        console2.log("CycleUpdater address:", cycleUpdater);
+        console2.log("ValuationService address:", valuationService);
+        console2.log("Min collateral ratio:", minCollateralRatio);
+        console2.log("Margin buffered collateral ratio:", marginBufferedCollateralRatio);
     }
 }
