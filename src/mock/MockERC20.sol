@@ -14,19 +14,18 @@ contract MockERC20 is ERC20, Ownable {
     /// @param name_ Token name
     /// @param symbol_ Token symbol
     /// @param decimals_ Token decimals (e.g., 8 for WBTC, 6 for USDC)
-    /// @param initialOwner Owner address (will control mint/burn)
-    /// @param initialSupply Initial supply to mint to initialOwner (in smallest units)
+    /// @param recipient Address to receive initial supply
+    /// @param initialSupply Initial supply to mint to recipient (in smallest units)
     constructor(
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        address initialOwner,
+        address recipient,
         uint256 initialSupply
-    ) ERC20(name_, symbol_) Ownable(initialOwner) {
-        require(initialOwner != address(0), "owner is zero");
+    ) ERC20(name_, symbol_) Ownable(msg.sender) {
         CUSTOM_DECIMALS = decimals_;
         if (initialSupply > 0) {
-            _mint(initialOwner, initialSupply);
+            _mint(recipient, initialSupply);
         }
     }
 

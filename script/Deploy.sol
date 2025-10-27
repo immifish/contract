@@ -105,13 +105,14 @@ contract TestDeployWBTC is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy MockERC20 as interest token
-        // Parameters: name, symbol, decimals, initialOwner, initialSupply
+        // Parameters: name, symbol, decimals, recipient, initialSupply
+        // Note: deployer (msg.sender) automatically becomes owner
         MockERC20 interestToken = new MockERC20(
             "Wrapped BTC",        // name
             "WBTC",                        // symbol
             8,                           // decimals (according to WBTC on base)
-            msg.sender,                   // initialOwner (deployer)
-            1000000 * 10**8             // initialSupply (1M tokens with 18 decimals)
+            msg.sender,                   // recipient (deployer receives initial supply)
+            1000000 * 10**8             // initialSupply (1M tokens with 8 decimals)
         );
 
         vm.stopBroadcast();

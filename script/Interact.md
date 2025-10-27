@@ -41,3 +41,12 @@ forge script script/Interact.sol:SetMinerOracle \
   --broadcast \
   -vvvv
 ```
+
+## Mint WBTC
+```bash
+forge script script/Interact.sol:MintWBTC \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```

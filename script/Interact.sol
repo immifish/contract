@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {Valuation} from "../src/Valuation.sol";
 import {MinerOracle} from "../src/MinerOracle.sol";
+import {MockERC20} from "../src/mock/MockERC20.sol";
 
 contract SetDataFeedForWBTC is Script {
     function run() external {
@@ -36,8 +37,8 @@ contract SetLtv_WBTC_FBTC10 is Script {
         address valuationProxy = vm.envAddress("TEST_VALUATION_PROXY_ADDRESS");
         
         // Parameters - modify these directly in the script
-        address collateralAsset = 0x2906C5C8Ac0Aff8FAe91599b85c30Ee301e8d485; // WBTC address
-        address loanAsset = 0x698C577194be782D4bBB9f2849A7e4E1e999137e; // FBTC10 address
+        address collateralAsset = 0x12F75bC2d5451be14ec02829056490E914d21301; // WBTC address
+        address loanAsset = 0xf0C970166AbCC119731ADfbf33C57Bb49Bc1E57F; // FBTC10 address
         int256 ltv = 8000; // 80% LTV (scaled by 10000)
         bool isValid = true; // Set to true to enable, false to disable
         
@@ -62,7 +63,7 @@ contract SetTokenPrice_FBTC10 is Script {
         address minerOracleAddress = vm.envAddress("TEST_MINER_ORACLE_PROXY_ADDRESS");
         
         // Parameters - modify these directly in the script
-        address minerToken = 0x698C577194be782D4bBB9f2849A7e4E1e999137e; // FBTC10 address
+        address minerToken = 0xf0C970166AbCC119731ADfbf33C57Bb49Bc1E57F; // FBTC10 address
         int256 price = 2000000000; // $20 USD (scaled by 10^8 for USD decimal)
         
         vm.startBroadcast(deployerPrivateKey);
@@ -97,6 +98,29 @@ contract SetMinerOracle is Script {
         console2.log("Miner Oracle set successfully!");
         console2.log("Valuation Proxy:", valuationProxy);
         console2.log("Miner Oracle Address:", minerOracleAddress);
+    }
+}
+
+contract MintWBTC is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address mockTokenAddress = vm.envAddress("TEST_WBTC_ADDRESS");
+        
+        // Parameters - modify these directly in the script
+        address recipient = 0x1bF5c8C327ECf83Adf7CdCeeb2173fd085968fBe; // Replace with recipient address
+        uint256 amount = 1000 * 10**8; // 1000 tokens with 18 decimals (adjust based on token decimals)
+        
+        vm.startBroadcast(deployerPrivateKey);
+        
+        MockERC20 mockToken = MockERC20(mockTokenAddress);
+        mockToken.mint(recipient, amount);
+        
+        vm.stopBroadcast();
+        
+        console2.log("MockERC20 minted successfully!");
+        console2.log("Token Address:", mockTokenAddress);
+        console2.log("Recipient:", recipient);
+        console2.log("Amount:", amount);
     }
 }
 
