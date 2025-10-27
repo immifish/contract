@@ -213,3 +213,24 @@ forge verify-contract \
   node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 ```
 
+
+## Deploy BatchTransfer
+
+```bash
+forge script script/Deploy.sol:TestDeployBatchTransfer \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```
+
+## Verify BatchTransfer
+
+```bash
+forge verify-contract \
+  --chain $BASE_SEPOLIA_CHAIN_ID \
+  --etherscan-api-key $ETHERSCAN_API_KEY \
+  --watch \
+  $TEST_BATCH_TRANSFER \
+  src/helper/BatchTransfer.sol:BatchTransfer
+```

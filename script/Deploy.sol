@@ -10,6 +10,7 @@ import {MinerToken} from "../src/MinerToken.sol";
 import {Valuation} from "../src/Valuation.sol";
 import {DebtorManager} from "../src/DebtorManager.sol";
 import {MockERC20} from "../src/mock/MockERC20.sol";
+import {BatchTransfer} from "../src/helper/BatchTransfer.sol";
 
 contract TestDeployCycleUpdater is Script {
     function run() external returns (address implementation, address proxy) {
@@ -192,5 +193,22 @@ contract TestDeployDebtorManagerForFBTC10 is Script {
         console2.log("ValuationService address:", valuationService);
         console2.log("Min collateral ratio:", minCollateralRatio);
         console2.log("Margin buffered collateral ratio:", marginBufferedCollateralRatio);
+    }
+}
+
+contract TestDeployBatchTransfer is Script {
+    function run() external returns (address batchTransfer) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy BatchTransfer contract (not upgradeable, so no proxy needed)
+        BatchTransfer batchTransferContract = new BatchTransfer();
+
+        vm.stopBroadcast();
+
+        batchTransfer = address(batchTransferContract);
+
+        console2.log("BatchTransfer deployed at:", batchTransfer);
     }
 }
