@@ -26,8 +26,8 @@ export class DebtorManager extends BaseContract {
   }
 
   /**
-   * Set valuation service address (owner only)
-   * @param {string} valuationService - Address of valuation service
+   * Set valuation address (owner only)
+   * @param {string} valuationService - Address of valuation contract
    * @param {Object} options - Transaction options
    * @returns {Promise<Object>} Transaction result
    */

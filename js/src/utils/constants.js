@@ -2,7 +2,7 @@
 export const CONTRACT_ADDRESSES = {
   // Main contracts (fallback from environment variables)
   MINER_TOKEN: process.env.MINER_TOKEN_ADDRESS || '', // Kept for backward compatibility
-  VALUATION_SERVICE: process.env.VALUATION_SERVICE_ADDRESS || '',
+  VALUATION: process.env.VALUATION_ADDRESS || '',
   DEBTOR_MANAGER: process.env.DEBTOR_MANAGER_ADDRESS || '',
   CYCLE_UPDATER: process.env.CYCLE_UPDATER_ADDRESS || '',
   PRICE_ORACLE: process.env.PRICE_ORACLE_ADDRESS || '',
@@ -24,7 +24,7 @@ export const CONTRACT_ADDRESSES = {
   // Network-specific addresses
   BASE_SEPOLIA: {
     MINER_TOKEN: '', // Kept for backward compatibility
-    VALUATION_SERVICE: '',
+    VALUATION: '',
     DEBTOR_MANAGER: '',
     CYCLE_UPDATER: '0xB40C5De773828Aea6E22989730aaac872A8FD639',
     PRICE_ORACLE: '',
@@ -42,7 +42,7 @@ export const CONTRACT_ADDRESSES = {
   },
   BASE_MAINNET: {
     MINER_TOKEN: '', // Kept for backward compatibility
-    VALUATION_SERVICE: '',
+    VALUATION: '',
     DEBTOR_MANAGER: '',
     CYCLE_UPDATER: '',
     PRICE_ORACLE: '',

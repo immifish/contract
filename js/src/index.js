@@ -2,7 +2,8 @@
 
 // Contract classes
 export { MinerToken } from './contracts/MinerToken.js';
-export { ValuationService } from './contracts/ValuationService.js';
+export { Valuation } from './contracts/Valuation.js';
+export { Debtor } from './contracts/Debtor.js';
 export { DebtorManager } from './contracts/DebtorManager.js';
 export { MinerOracle } from './contracts/MinerOracle.js';
 export { BatchTransfer } from './contracts/BatchTransfer.js';

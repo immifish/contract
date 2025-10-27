@@ -1,9 +1,9 @@
 import { BaseContract } from './BaseContract.js';
 
 /**
- * ValuationService contract interaction class
+ * Valuation contract interaction class
  */
-export class ValuationService extends BaseContract {
+export class Valuation extends BaseContract {
   constructor(address, abi, provider) {
     super(address, abi, provider);
   }
@@ -122,3 +122,4 @@ export class ValuationService extends BaseContract {
     }
   }
 }
+
