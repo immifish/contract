@@ -45,7 +45,7 @@ contract TestDeployMinerOracle is Script {
         // Deploy implementation
         MinerOracle implementationContract = new MinerOracle();
 
-        bytes memory initCalldata = abi.encodeWithSelector(MinerOracle.initialize.selector, msg.sender);
+        bytes memory initCalldata = abi.encodeWithSelector(MinerOracle.initialize.selector);
 
         ERC1967Proxy proxyContract = new ERC1967Proxy(address(implementationContract), initCalldata);
 

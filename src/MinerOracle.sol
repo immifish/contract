@@ -10,8 +10,8 @@ contract MinerOracle is Initializable, OwnableUpgradeable, IMinerOracle {
     // currently it is for both mint price and liquidate price
     mapping(address => int256) public price;
 
-    function initialize(address _owner) external initializer {
-        __Ownable_init(_owner);
+    function initialize() public initializer {
+        __Ownable_init(msg.sender);
     }
 
     // this price is the the same as chainlink price, with quote token usd decimal 8

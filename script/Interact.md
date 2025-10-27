@@ -21,3 +21,23 @@ forge script script/Interact.sol:SetLtv_WBTC_FBTC10 \
   --broadcast \
   -vvvv
 ```
+
+## Set Token Price for FBTC10
+
+```bash
+forge script script/Interact.sol:SetTokenPrice_FBTC10 \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```
+
+## Set Miner Oracle for Valuation
+
+```bash
+forge script script/Interact.sol:SetMinerOracle \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```

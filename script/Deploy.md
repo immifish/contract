@@ -66,7 +66,7 @@ forge verify-contract \
   $TEST_MINER_ORACLE_PROXY_ADDRESS \
   --constructor-args $(cast abi-encode "constructor(address,bytes)" \
     $TEST_MINER_ORACLE_IMPLEMENTATION_ADDRESS \
-    $(cast abi-encode "function initialize(address)" \
+    $(cast abi-encode "function initialize()" \
     $TEST_ACCOUNT_ADDRESS
     )) \
   node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
