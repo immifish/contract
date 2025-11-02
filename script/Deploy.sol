@@ -213,3 +213,27 @@ contract TestDeployBatchTransfer is Script {
         console2.log("BatchTransfer deployed at:", batchTransfer);
     }
 }
+
+contract UpgradeValuation is Script {
+    function run() external returns (address newImplementation) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address valuationProxy = vm.envAddress("TEST_VALUATION_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy new implementation
+        Valuation newImplementationContract = new Valuation();
+
+        // Upgrade the proxy to point to the new implementation
+        Valuation valuation = Valuation(valuationProxy);
+        valuation.upgradeToAndCall(address(newImplementationContract), "");
+
+        vm.stopBroadcast();
+
+        newImplementation = address(newImplementationContract);
+
+        console2.log("Valuation upgrade completed!");
+        console2.log("New implementation address:", newImplementation);
+        console2.log("Proxy address (unchanged):", valuationProxy);
+    }
+}

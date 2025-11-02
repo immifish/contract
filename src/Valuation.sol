@@ -109,16 +109,16 @@ contract Valuation is Initializable, OwnableUpgradeable, UUPSUpgradeable, IValua
     }
     
     function queryPriceLtv(
-        address _inputToken,  //_collateralAsset
-        address _baseToken,   //_loanAsset
+        address _collateralAsset,
+        address _loanAsset,
         int256 _tokenAmount
     ) public view returns (int256) {
-        if (_inputToken == _baseToken) {
+        if (_collateralAsset == _loanAsset) {
             return _tokenAmount;
         } else {
-            int256 price = queryPrice(_inputToken, _tokenAmount);
+            int256 price = queryPrice(_collateralAsset, _tokenAmount);
             price =
-                (price * ltv[_baseToken][_inputToken]) /
+                (price * ltv[_collateralAsset][_loanAsset]) /
                 SCALE_FACTOR;
             return price;
         }

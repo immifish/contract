@@ -146,6 +146,17 @@ forge script script/Deploy.sol:TestDeployValuation \
   -vvvv
 ```
 
+## Upgrade Valuation
+
+```bash
+forge script script/Deploy.sol:UpgradeValuation \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```
+
+
 ## Verify Valuation (implementation)
 
 ```bash

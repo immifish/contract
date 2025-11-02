@@ -50,3 +50,12 @@ forge script script/Interact.sol:MintWBTC \
   --broadcast \
   -vvvv
 ```
+
+## Set DebtorManger
+```bash
+forge script script/Interact.sol:SetDebtorManagerForFBTC10 \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```

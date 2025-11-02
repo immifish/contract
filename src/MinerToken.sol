@@ -46,6 +46,7 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         return _debtors[_debtor].timeStamp.lastModifiedTime > 0;
     }
 
+    //todo it has the same name with getDebtor in DebtorManager.sol should change later
     function getDebtor(address _debtor) public view returns (Debtor memory) {
         return _debtors[_debtor];
     }

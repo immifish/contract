@@ -6,6 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {Valuation} from "../src/Valuation.sol";
 import {MinerOracle} from "../src/MinerOracle.sol";
 import {MockERC20} from "../src/mock/MockERC20.sol";
+import {MinerToken} from "../src/MinerToken.sol";
 
 contract SetDataFeedForWBTC is Script {
     function run() external {
@@ -13,7 +14,7 @@ contract SetDataFeedForWBTC is Script {
         address valuationProxy = vm.envAddress("TEST_VALUATION_PROXY_ADDRESS");
         
         // Parameters - modify these directly in the script
-        address asset = 0x2906C5C8Ac0Aff8FAe91599b85c30Ee301e8d485; //
+        address asset = vm.envAddress("TEST_WBTC_ADDRESS"); //
         address aggregator = 0x0FB99723Aee6f420beAD13e6bBB79b7E6F034298; // Replace with actual Chainlink aggregator address
         uint256 tokenDecimal = 8; // Token decimals (e.g., 8 for WBTC, 18 for most ERC20s)
         
@@ -98,6 +99,27 @@ contract SetMinerOracle is Script {
         console2.log("Miner Oracle set successfully!");
         console2.log("Valuation Proxy:", valuationProxy);
         console2.log("Miner Oracle Address:", minerOracleAddress);
+    }
+}
+
+contract SetDebtorManagerForFBTC10 is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        // Parameters - modify these directly in the script
+        address debtorManagerAddress = vm.envAddress("TEST_DEBTOR_MANAGER_FBTC10_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        MinerToken minerToken = MinerToken(minerTokenProxy);
+        minerToken.setDebtorManager(debtorManagerAddress);
+
+        vm.stopBroadcast();
+
+        console2.log("Debtor Manager set successfully!");
+        console2.log("MinerToken Proxy:", minerTokenProxy);
+        console2.log("DebtorManager Address:", debtorManagerAddress);
     }
 }
 
