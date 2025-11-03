@@ -93,8 +93,8 @@ contract TestFBTC10 is Script {
         implementation = address(implementationContract);
         proxy = address(proxyContract);
 
-        console2.log("MinerToken implementation:", implementation);
-        console2.log("MinerToken proxy:", proxy);
+        console2.log("Test FBTC10 implementation:", implementation);
+        console2.log("Test FBTC10 proxy:", proxy);
     }
 }
 

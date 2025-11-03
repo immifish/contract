@@ -74,8 +74,8 @@ contract Debtor is IDebtor, ReentrancyGuard {
         IMinerToken(MINER_TOKEN).removeReserve(_to, _amount);
     }
 
-    function mint(uint256 _amount) public debtorOwner keepHealthy{
-        IMinerToken(MINER_TOKEN).mint(address(this), _amount);
+    function mint(uint256 _amount, address _to) public debtorOwner keepHealthy{
+        IMinerToken(MINER_TOKEN).mint(_to, _amount);
     }
 
     function removeCollateral(address _token, address _to, uint256 _amount) public debtorOwner keepHealthy{

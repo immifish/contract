@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IDebtorManager} from "./interface/IDebtorManager.sol";
 import {Debtor} from "./debtor/Debtor.sol";
 import {IMinerToken} from "./interface/IMinerToken.sol";
@@ -14,7 +15,7 @@ import {ICycleUpdater} from "./interface/ICycleUpdater.sol";
 /**
 the calculation of this contract is also int256 based
  */
-contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
+contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable, UUPSUpgradeable {
     
     address public minerToken;
     IValuation valuationService;
@@ -38,6 +39,7 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
                         int256 _marginBufferedCollateralRatio
                         ) external initializer {
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         minerToken = _minerToken;
         cycleUpdater = ICycleUpdater(_cycleUpdater);
         valuationService = IValuation(_valuationService);
@@ -46,6 +48,8 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
             marginBufferedCollateralRatio: _marginBufferedCollateralRatio
         });
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
 
     function setValuationService(address _valuationService) external onlyOwner {
@@ -136,9 +140,15 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable {
         int256 revaluedCollateralValue = collateralValueInDebtorContract + valuationService.queryPrice(IMinerToken(minerToken).interestToken(), interestReserveAdjusted);
         int256 outStandingValue = valuationService.queryMinerPrice(minerToken, SafeCast.toInt256(_minerDebtor.outStandingBalance));
 
-        collateralRatio = revaluedCollateralValue * SCALE_FACTOR / outStandingValue;
-        passMinCollateralRatioCheck = collateralRatio >= minCollateralRatio;
-        passMarginBufferedCollateralRatioCheck = collateralRatio >= marginBufferedCollateralRatio;
+        if (outStandingValue == 0) {
+            collateralRatio = SCALE_FACTOR * 100; //make it fixed
+            passMinCollateralRatioCheck = true;
+            passMarginBufferedCollateralRatioCheck = true;
+        }else {
+            collateralRatio = revaluedCollateralValue * SCALE_FACTOR / outStandingValue;
+            passMinCollateralRatioCheck = collateralRatio >= minCollateralRatio;
+            passMarginBufferedCollateralRatioCheck = collateralRatio >= marginBufferedCollateralRatio;
+        }
     }
 
     function healthCheck(address _debtor) public view returns (int256 collateralRatio, 

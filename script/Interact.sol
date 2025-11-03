@@ -7,6 +7,7 @@ import {Valuation} from "../src/Valuation.sol";
 import {MinerOracle} from "../src/MinerOracle.sol";
 import {MockERC20} from "../src/mock/MockERC20.sol";
 import {MinerToken} from "../src/MinerToken.sol";
+import {Debtor} from "../src/debtor/Debtor.sol";
 
 contract SetDataFeedForWBTC is Script {
     function run() external {
@@ -38,8 +39,8 @@ contract SetLtv_WBTC_FBTC10 is Script {
         address valuationProxy = vm.envAddress("TEST_VALUATION_PROXY_ADDRESS");
         
         // Parameters - modify these directly in the script
-        address collateralAsset = 0x12F75bC2d5451be14ec02829056490E914d21301; // WBTC address
-        address loanAsset = 0xf0C970166AbCC119731ADfbf33C57Bb49Bc1E57F; // FBTC10 address
+        address collateralAsset = vm.envAddress("TEST_WBTC_ADDRESS"); // WBTC address
+        address loanAsset = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS"); // FBTC10 address
         int256 ltv = 8000; // 80% LTV (scaled by 10000)
         bool isValid = true; // Set to true to enable, false to disable
         
@@ -64,7 +65,7 @@ contract SetTokenPrice_FBTC10 is Script {
         address minerOracleAddress = vm.envAddress("TEST_MINER_ORACLE_PROXY_ADDRESS");
         
         // Parameters - modify these directly in the script
-        address minerToken = 0xf0C970166AbCC119731ADfbf33C57Bb49Bc1E57F; // FBTC10 address
+        address minerToken = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS"); // FBTC10 address
         int256 price = 2000000000; // $20 USD (scaled by 10^8 for USD decimal)
         
         vm.startBroadcast(deployerPrivateKey);
@@ -142,6 +143,28 @@ contract MintWBTC is Script {
         console2.log("MockERC20 minted successfully!");
         console2.log("Token Address:", mockTokenAddress);
         console2.log("Recipient:", recipient);
+        console2.log("Amount:", amount);
+    }
+}
+
+contract DebtorMint is Script {
+    function run() external {
+        uint256 ownerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address debtorAddress = 0xedd2635a1B1800c6668dDA30C5B11338d40Fb004;
+        address to = 0x1bF5c8C327ECf83Adf7CdCeeb2173fd085968fBe;
+
+        // Parameters - modify via env
+        uint256 amount = 1 * 10**18;
+
+        vm.startBroadcast(ownerPrivateKey);
+
+        Debtor debtor = Debtor(debtorAddress);
+        debtor.mint(amount, to);
+
+        vm.stopBroadcast();
+
+        console2.log("Debtor minted successfully!");
+        console2.log("Debtor:", debtorAddress);
         console2.log("Amount:", amount);
     }
 }
