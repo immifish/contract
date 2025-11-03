@@ -157,7 +157,7 @@ const removeReserveTx = await debtor.removeReserve(recipientAddress, '500');
 await removeReserveTx.wait();
 
 // Mint tokens (must maintain healthy status)
-const mintTx = await debtor.mint('1000');
+const mintTx = await debtor.mint(recipientAddress, '1000');
 await mintTx.wait();
 
 // Remove collateral (must maintain healthy status)

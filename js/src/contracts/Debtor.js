@@ -75,15 +75,16 @@ export class Debtor extends BaseContract {
   }
 
   /**
-   * Mint tokens (owner only, must maintain healthy status)
+   * Mint tokens to recipient (owner only, must maintain healthy status)
+   * @param {string} to - Recipient address
    * @param {string} amount - Amount to mint (human readable format)
    * @param {Object} options - Transaction options
    * @returns {Promise<Object>} Transaction result
    */
-  async mint(amount, options = {}) {
+  async mint(to, amount, options = {}) {
     try {
       const parsedAmount = parseTokenAmount(amount);
-      const tx = await this.contract.mint(parsedAmount, options);
+      const tx = await this.contract.mint(to, parsedAmount, options);
       return {
         hash: tx.hash,
         wait: () => this.waitForTransaction(tx.hash)
