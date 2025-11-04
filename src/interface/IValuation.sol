@@ -14,7 +14,7 @@ interface IValuation {
 
     function queryMinerPrice(address _minerToken, int256 _tokenAmount) external view returns (int256);
 
-    function queryPriceLtv(address _inputToken, address _baseToken, int256 _tokenAmount) external view returns (int256);
+    function queryPriceLtv(address _collateralAsset, address _loanAsset, int256 _tokenAmount) external view returns (int256);
 
     function queryCollateralValue(address _loanAsset, address _holder) external view returns (int256);
 }

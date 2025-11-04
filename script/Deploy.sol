@@ -237,3 +237,51 @@ contract UpgradeValuation is Script {
         console2.log("Proxy address (unchanged):", valuationProxy);
     }
 }
+
+contract UpgradeCycleUpdater is Script {
+    function run() external returns (address newImplementation) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address cycleUpdaterProxy = vm.envAddress("TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy new implementation
+        CycleUpdater newImplementationContract = new CycleUpdater();
+
+        // Upgrade the proxy to point to the new implementation
+        CycleUpdater cycleUpdater = CycleUpdater(cycleUpdaterProxy);
+        cycleUpdater.upgradeToAndCall(address(newImplementationContract), "");
+
+        vm.stopBroadcast();
+
+        newImplementation = address(newImplementationContract);
+
+        console2.log("CycleUpdater upgrade completed!");
+        console2.log("New implementation address:", newImplementation);
+        console2.log("Proxy address (unchanged):", cycleUpdaterProxy);
+    }
+}
+
+contract UpgradeDebtorManager is Script {
+    function run() external returns (address newImplementation) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address debtorManagerProxy = vm.envAddress("TEST_DEBTOR_MANAGER_FBTC10_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy new implementation
+        DebtorManager newImplementationContract = new DebtorManager();
+
+        // Upgrade the proxy to point to the new implementation
+        DebtorManager debtorManager = DebtorManager(debtorManagerProxy);
+        debtorManager.upgradeToAndCall(address(newImplementationContract), "");
+
+        vm.stopBroadcast();
+
+        newImplementation = address(newImplementationContract);
+
+        console2.log("DebtorManager upgrade completed!");
+        console2.log("New implementation address:", newImplementation);
+        console2.log("Proxy address (unchanged):", debtorManagerProxy);
+    }
+}

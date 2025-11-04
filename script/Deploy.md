@@ -35,6 +35,16 @@ forge verify-contract \
   node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 ```
 
+## Upgrade Cycle Updater
+
+```bash
+forge script script/Deploy.sol:UpgradeCycleUpdater \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```
+
 ## Deploy MinerOracle
 
 ```bash
@@ -224,6 +234,15 @@ forge verify-contract \
   node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 ```
 
+## Upgrade DebtorManager
+
+```bash
+forge script script/Deploy.sol:UpgradeDebtorManager \
+  --chain-id $BASE_SEPOLIA_CHAIN_ID \
+  --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  -vvvv
+```
 
 ## Deploy BatchTransfer
 
