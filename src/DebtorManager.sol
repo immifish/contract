@@ -56,6 +56,11 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable, UUP
         valuationService = IValuation(_valuationService);
     }
 
+    // reserved for upgrade
+    function setCycleUpdater(address _newCycleUpdater) external onlyOwner {
+        cycleUpdater = ICycleUpdater(_newCycleUpdater);
+    }
+
     function setDefaultDebtorParams(DebtorParams memory _defaultDebtorParams) external onlyOwner {
         defaultDebtorParams = _defaultDebtorParams;
     }

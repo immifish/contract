@@ -21,8 +21,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
     Cycle[] cycles;
 
     // Constant used for interest calculations to maintain precision
-    uint256 public constant SCALING_FACTOR = 10 ** 20;
-    uint256 public constant PATCH_FACTOR = 10 ** 10;
+    uint256 public constant SCALING_FACTOR = 10 ** 30;
 
     constructor() {
         // Disable initializers to prevent the contract from being initialized more than once
@@ -73,7 +72,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
             Cycle storage cycle = cycles[currentCycle];
             // Calculate the interest factor for the current cycle
             cycle.rateFactor =
-                _currentCycleInterest * PATCH_FACTOR /
+                _currentCycleInterest /
                 (block.timestamp - cycle.startTime);
             // Update the interest snapshot for the current cycle
             cycle.interestSnapShot =
@@ -106,7 +105,7 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
             (_factorBeforeUpdate +
                 _balance *
                 (cycles[_lastModifiedCycle + 1].startTime - _lastModifiedTime));
-        return (fullCycleInterest + partCycleInterest) / (SCALING_FACTOR * PATCH_FACTOR);
+        return (fullCycleInterest + partCycleInterest) / SCALING_FACTOR;
     }
 
 

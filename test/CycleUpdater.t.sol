@@ -356,7 +356,7 @@ contract CycleUpdaterBasicTest is Test {
     // ============ CONSTANT TESTS ============
 
     function testScalingFactorConstant() public {
-        assertEq(cycleUpdater.SCALING_FACTOR(), 10 ** 20);
+        assertEq(cycleUpdater.SCALING_FACTOR(), 10 ** 30);
     }
 }
 

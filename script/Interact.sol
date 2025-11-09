@@ -8,7 +8,10 @@ import {MinerOracle} from "../src/MinerOracle.sol";
 import {MockERC20} from "../src/mock/MockERC20.sol";
 import {MinerToken} from "../src/MinerToken.sol";
 import {Debtor} from "../src/debtor/Debtor.sol";
+import {DebtorManager} from "../src/DebtorManager.sol";
 
+// Set Data Feed for WBTC
+// forge script script/Interact.sol:SetDataFeedForWBTC --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract SetDataFeedForWBTC is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -33,6 +36,8 @@ contract SetDataFeedForWBTC is Script {
     }
 }
 
+// Set LTV for WBTC/FBTC10
+// forge script script/Interact.sol:SetLtv_WBTC_FBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract SetLtv_WBTC_FBTC10 is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -59,6 +64,8 @@ contract SetLtv_WBTC_FBTC10 is Script {
     }
 }
 
+// Set Token Price for FBTC10
+// forge script script/Interact.sol:SetTokenPrice_FBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract SetTokenPrice_FBTC10 is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -82,6 +89,8 @@ contract SetTokenPrice_FBTC10 is Script {
     }
 }
 
+// Set Miner Oracle for Valuation
+// forge script script/Interact.sol:SetMinerOracle --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract SetMinerOracle is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -103,6 +112,8 @@ contract SetMinerOracle is Script {
     }
 }
 
+// Set DebtorManger
+// forge script script/Interact.sol:SetDebtorManagerForFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract SetDebtorManagerForFBTC10 is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -124,6 +135,54 @@ contract SetDebtorManagerForFBTC10 is Script {
     }
 }
 
+// Set Cycle Updater in Token
+// forge script script/Interact.sol:SetCycleUpdaterForFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract SetCycleUpdaterForFBTC10 is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        // Parameters - modify these directly in the script
+        address cycleUpdaterAddress = vm.envAddress("TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        MinerToken minerToken = MinerToken(minerTokenProxy);
+        minerToken.setCycleUpdater(cycleUpdaterAddress);
+
+        vm.stopBroadcast();
+
+        console2.log("Cycle Updater set successfully!");
+        console2.log("MinerToken Proxy:", minerTokenProxy);
+        console2.log("Cycle Updater Address:", cycleUpdaterAddress);
+    }
+}
+
+// Set Cycle Updater in DebtorManager
+// forge script script/Interact.sol:SetCycleUpdaterForDebtorManagerOfFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract SetCycleUpdaterForDebtorManagerOfFBTC10 is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address debtorManagerProxy = vm.envAddress("TEST_DEBTOR_MANAGER_FBTC10_PROXY_ADDRESS");
+
+        // Parameters - modify these directly in the script
+        address cycleUpdaterAddress = vm.envAddress("TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        DebtorManager debtorManager = DebtorManager(debtorManagerProxy);
+        debtorManager.setCycleUpdater(cycleUpdaterAddress);
+
+        vm.stopBroadcast();
+
+        console2.log("Cycle Updater set successfully!");
+        console2.log("DebtorManager Proxy:", debtorManagerProxy);
+        console2.log("Cycle Updater Address:", cycleUpdaterAddress);
+    }
+}
+
+// Mint WBTC
+// forge script script/Interact.sol:MintWBTC --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract MintWBTC is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -147,6 +206,8 @@ contract MintWBTC is Script {
     }
 }
 
+// Try to mint
+// forge script script/Interact.sol:DebtorMint --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract DebtorMint is Script {
     function run() external {
         uint256 ownerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");

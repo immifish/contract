@@ -12,6 +12,10 @@ import {DebtorManager} from "../src/DebtorManager.sol";
 import {MockERC20} from "../src/mock/MockERC20.sol";
 import {BatchTransfer} from "../src/helper/BatchTransfer.sol";
 
+// Deploy CycleUpdater
+// forge script script/Deploy.sol:TestDeployCycleUpdater --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_CYCLE_FBTC10_IMPLEMENTATION_ADDRESS src/CycleUpdater.sol:CycleUpdater
+// Verify Proxy: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS --constructor-args $(cast abi-encode "constructor(address,bytes)" $TEST_CYCLE_FBTC10_IMPLEMENTATION_ADDRESS $(cast abi-encode "function initialize()")) node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 contract TestDeployCycleUpdater is Script {
     function run() external returns (address implementation, address proxy) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -37,6 +41,10 @@ contract TestDeployCycleUpdater is Script {
     }
 }
 
+// Deploy MinerOracle
+// forge script script/Deploy.sol:TestDeployMinerOracle --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_MINER_ORACLE_IMPLEMENTATION_ADDRESS src/MinerOracle.sol:MinerOracle
+// Verify Proxy: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_MINER_ORACLE_PROXY_ADDRESS --constructor-args $(cast abi-encode "constructor(address,bytes)" $TEST_MINER_ORACLE_IMPLEMENTATION_ADDRESS $(cast abi-encode "function initialize()" $TEST_ACCOUNT_ADDRESS)) node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 contract TestDeployMinerOracle is Script {
     function run() external returns (address implementation, address proxy) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -60,6 +68,10 @@ contract TestDeployMinerOracle is Script {
     }
 }
 
+// Deploy F(BTC,10)
+// forge script script/Deploy.sol:TestFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_FBTC10_IMPLEMENTATION_ADDRESS src/MinerToken.sol:MinerToken
+// Verify Proxy: forge verify-contract --chain base-sepolia --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_FBTC10_PROXY_ADDRESS --constructor-args $(cast abi-encode "constructor(address,bytes)" $TEST_FBTC10_IMPLEMENTATION_ADDRESS $(cast abi-encode "function initialize(string,string,uint8,address,address,address,uint256)" "F(BTC,10)" "F(BTC,10)" 18 $TEST_WBTC_ADDRESS $TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS $TEST_FEE_RECEIVER_ADDRESS 100)) node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 contract TestFBTC10 is Script {
     function run() external returns (address implementation, address proxy) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -98,6 +110,9 @@ contract TestFBTC10 is Script {
     }
 }
 
+// Deploy WBTC
+// forge script script/Deploy.sol:TestDeployWBTC --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_WBTC_ADDRESS src/mock/MockERC20.sol:MockERC20
 contract TestDeployWBTC is Script {
     function run() external returns (address token) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -123,6 +138,10 @@ contract TestDeployWBTC is Script {
     }
 }
 
+// Deploy Valuation
+// forge script script/Deploy.sol:TestDeployValuation --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_VALUATION_IMPLEMENTATION_ADDRESS src/Valuation.sol:Valuation
+// Verify Proxy: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_VALUATION_PROXY_ADDRESS --constructor-args $(cast abi-encode "constructor(address,bytes)" $TEST_VALUATION_IMPLEMENTATION_ADDRESS $(cast abi-encode "function initialize(address)" $TEST_MINER_ORACLE_PROXY_ADDRESS)) node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 contract TestDeployValuation is Script {
     function run() external returns (address implementation, address proxy) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -149,6 +168,10 @@ contract TestDeployValuation is Script {
     }
 }
 
+// Deploy DebtorManager
+// forge script script/Deploy.sol:TestDeployDebtorManagerForFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_DEBTOR_MANAGER_FBTC10_IMPLEMENTATION_ADDRESS src/DebtorManager.sol:DebtorManager
+// Verify Proxy: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_DEBTOR_MANAGER_FBTC10_PROXY_ADDRESS --constructor-args $(cast abi-encode "constructor(address,bytes)" $TEST_DEBTOR_MANAGER_FBTC10_IMPLEMENTATION_ADDRESS $(cast abi-encode "function initialize(address,address,address,int256,int256)" $TEST_FBTC10_PROXY_ADDRESS $TEST_CYCLE_UPDATER_FBTC10_PROXY_ADDRESS $TEST_VALUATION_PROXY_ADDRESS 12000 15000)) node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy
 contract TestDeployDebtorManagerForFBTC10 is Script {
     function run() external returns (address implementation, address proxy) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -197,6 +220,9 @@ contract TestDeployDebtorManagerForFBTC10 is Script {
     }
 }
 
+// Deploy BatchTransfer
+// forge script script/Deploy.sol:TestDeployBatchTransfer --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_BATCH_TRANSFER src/helper/BatchTransfer.sol:BatchTransfer
 contract TestDeployBatchTransfer is Script {
     function run() external returns (address batchTransfer) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -214,6 +240,8 @@ contract TestDeployBatchTransfer is Script {
     }
 }
 
+// Upgrade Valuation
+// forge script script/Deploy.sol:UpgradeValuation --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract UpgradeValuation is Script {
     function run() external returns (address newImplementation) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -238,6 +266,8 @@ contract UpgradeValuation is Script {
     }
 }
 
+// Upgrade Cycle Updater
+// forge script script/Deploy.sol:UpgradeCycleUpdater --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract UpgradeCycleUpdater is Script {
     function run() external returns (address newImplementation) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -262,6 +292,8 @@ contract UpgradeCycleUpdater is Script {
     }
 }
 
+// Upgrade DebtorManager
+// forge script script/Deploy.sol:UpgradeDebtorManager --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
 contract UpgradeDebtorManager is Script {
     function run() external returns (address newImplementation) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
