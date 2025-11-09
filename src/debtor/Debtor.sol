@@ -25,13 +25,20 @@
 
 pragma solidity ^0.8.0;
 
-import {IDebtor} from "./interface/IDebtor.sol";
-import {IDebtorManager} from "../interface/IDebtorManager.sol";
-import {IMinerToken} from "../interface/IMinerToken.sol";
+import {IDebtorManager} from "../DebtorManager.sol";
+import {IMinerToken} from "../MinerToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+interface IDebtor {
+
+    function VERSION() external view returns (uint8);
+
+    function debtorManager() external view returns (address);
+    
+}
 
 contract Debtor is IDebtor, ReentrancyGuard {
     using Address for address;

@@ -4,7 +4,10 @@ pragma solidity ^0.8.0;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IMinerOracle} from "./interface/IMinerOracle.sol";
+
+interface IMinerOracle {
+    function queryPrice(address _minerToken, int256 _tokenAmount) external view returns (int256);
+}
 
 contract MinerOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, IMinerOracle {
 

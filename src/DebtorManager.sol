@@ -6,11 +6,29 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IDebtorManager} from "./interface/IDebtorManager.sol";
 import {Debtor} from "./debtor/Debtor.sol";
-import {IMinerToken} from "./interface/IMinerToken.sol";
-import {IValuation} from "./interface/IValuation.sol";
-import {ICycleUpdater} from "./interface/ICycleUpdater.sol";
+import {IMinerToken} from "./MinerToken.sol";
+import {IValuation} from "./Valuation.sol";
+import {ICycleUpdater} from "./CycleUpdater.sol";
+
+interface IDebtorManager {
+
+    struct DebtorParams {
+        int256 minCollateralRatio;   //scaled
+        int256 marginBufferedCollateralRatio; //scaled
+    }
+
+    event CreateDebtor(address owner, address debtor);
+
+    function minerToken() external view returns (address);
+    function createDebtor() external returns (address);
+    function getDebtor(address _owner) external view returns (address);
+    function getDebtorParams(address _debtor) external view returns (DebtorParams memory);
+    function healthCheck(address _debtor) external view returns (int256 collateralRatio, 
+                            bool passMinCollateralRatioCheck,
+                            bool passMarginBufferedCollateralRatioCheck,
+                            int256 interestReserveAdjusted);
+}
 
 /**
 the calculation of this contract is also int256 based

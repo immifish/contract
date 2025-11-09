@@ -9,8 +9,24 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AddressArray} from "./lib/AddressArray.sol";
 import {AggregatorV3Interface} from "./interface/AggregatorV3Interface.sol";
-import {IValuation} from "./interface/IValuation.sol";
-import {IMinerOracle} from "./interface/IMinerOracle.sol";
+import {IMinerOracle} from "./MinerOracle.sol";
+
+interface IValuation {
+
+    struct DataFeed {
+        address aggregator;
+        uint8 aggregatorDecimal; // for chainlink feed with quote token usd, it is 8
+        uint256 tokenDecimal;
+    }
+
+    function queryPrice(address _asset, int256 _tokenAmount) external view returns (int256);
+
+    function queryMinerPrice(address _minerToken, int256 _tokenAmount) external view returns (int256);
+
+    function queryPriceLtv(address _collateralAsset, address _loanAsset, int256 _tokenAmount) external view returns (int256);
+
+    function queryCollateralValue(address _loanAsset, address _holder) external view returns (int256);
+}
 
 /*
 In this contact, we are using int256 for prices for two reasons:
