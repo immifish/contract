@@ -153,4 +153,69 @@ export class DebtorManager extends BaseContract {
       throw new Error(`Failed to run health check: ${error.message}`);
     }
   }
+
+  /**
+   * Run health check simulation with custom parameters
+   * @param {Object} minerDebtor - MinerToken.Debtor struct with timeStamp, outStandingBalance, debtFactor, interestReserve
+   * @param {string|number|bigint} collateralValueInDebtorContract - Collateral value in debtor contract
+   * @param {string|number|bigint} minCollateralRatio - Minimum collateral ratio
+   * @param {string|number|bigint} marginBufferedCollateralRatio - Margin buffered collateral ratio
+   * @returns {Promise<{collateralRatio: string, passMinCollateralRatioCheck: boolean, passMarginBufferedCollateralRatioCheck: boolean, interestReserveAdjusted: string}>}
+   */
+  async healthCheckSimulation(minerDebtor, collateralValueInDebtorContract, minCollateralRatio, marginBufferedCollateralRatio) {
+    try {
+      const result = await this.contract.healthCheckSimulation(
+        {
+          timeStamp: {
+            lastModifiedCycle: minerDebtor.timeStamp.lastModifiedCycle,
+            lastModifiedTime: minerDebtor.timeStamp.lastModifiedTime
+          },
+          outStandingBalance: minerDebtor.outStandingBalance,
+          debtFactor: minerDebtor.debtFactor,
+          interestReserve: minerDebtor.interestReserve
+        },
+        collateralValueInDebtorContract,
+        minCollateralRatio,
+        marginBufferedCollateralRatio
+      );
+      return {
+        collateralRatio: result[0].toString(),
+        passMinCollateralRatioCheck: result[1],
+        passMarginBufferedCollateralRatioCheck: result[2],
+        interestReserveAdjusted: result[3].toString()
+      };
+    } catch (error) {
+      throw new Error(`Failed to run health check simulation: ${error.message}`);
+    }
+  }
+
+  /**
+   * Set cycle updater address (owner only)
+   * @param {string} newCycleUpdater - Address of new cycle updater contract
+   * @param {Object} options - Transaction options
+   * @returns {Promise<Object>} Transaction result
+   */
+  async setCycleUpdater(newCycleUpdater, options = {}) {
+    try {
+      const tx = await this.contract.setCycleUpdater(newCycleUpdater, options);
+      return {
+        hash: tx.hash,
+        wait: () => this.waitForTransaction(tx.hash)
+      };
+    } catch (error) {
+      throw new Error(`Failed to set cycle updater: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get miner token address
+   * @returns {Promise<string>} Miner token address
+   */
+  async minerToken() {
+    try {
+      return await this.contract.minerToken();
+    } catch (error) {
+      throw new Error(`Failed to get miner token address: ${error.message}`);
+    }
+  }
 }

@@ -6,6 +6,7 @@ export { Valuation } from './contracts/Valuation.js';
 export { Debtor } from './contracts/Debtor.js';
 export { DebtorManager } from './contracts/DebtorManager.js';
 export { MinerOracle } from './contracts/MinerOracle.js';
+export { CycleUpdater } from './contracts/CycleUpdater.js';
 export { BatchTransfer } from './contracts/BatchTransfer.js';
 export { BaseContract } from './contracts/BaseContract.js';
 

@@ -157,4 +157,28 @@ export class MinerToken extends BaseContract {
       throw new Error(`Failed to get total supply: ${error.message}`);
     }
   }
+
+  /**
+   * Get interest token address
+   * @returns {Promise<string>} Interest token address
+   */
+  async interestToken() {
+    try {
+      return await this.contract.interestToken();
+    } catch (error) {
+      throw new Error(`Failed to get interest token address: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get cycle updater address
+   * @returns {Promise<string>} Cycle updater address
+   */
+  async cycleUpdater() {
+    try {
+      return await this.contract.cycleUpdater();
+    } catch (error) {
+      throw new Error(`Failed to get cycle updater address: ${error.message}`);
+    }
+  }
 }
