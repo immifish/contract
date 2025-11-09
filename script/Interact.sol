@@ -230,3 +230,50 @@ contract DebtorMint is Script {
     }
 }
 
+// Set Fee Receiver for FBTC10
+// forge script script/Interact.sol:SetFeeReceiverForFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract SetFeeReceiverForFBTC10 is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        // Parameters - modify these directly in the script
+        address newFeeReceiver = vm.envAddress("TEST_FEE_RECEIVER_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        MinerToken minerToken = MinerToken(minerTokenProxy);
+        minerToken.setFeeReceiver(newFeeReceiver);
+
+        vm.stopBroadcast();
+
+        console2.log("Fee Receiver set successfully!");
+        console2.log("MinerToken Proxy:", minerTokenProxy);
+        console2.log("New Fee Receiver Address:", newFeeReceiver);
+    }
+}
+
+// Set Fee Rate for FBTC10
+// forge script script/Interact.sol:SetFeeRateForFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract SetFeeRateForFBTC10 is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        // Parameters - modify these directly in the script
+        uint256 newFeeRate = 100; // 1% fee rate (scaled by 10000, so 100 = 1%)
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        MinerToken minerToken = MinerToken(minerTokenProxy);
+        minerToken.setFeeRate(newFeeRate);
+
+        vm.stopBroadcast();
+
+        console2.log("Fee Rate set successfully!");
+        console2.log("MinerToken Proxy:", minerTokenProxy);
+        console2.log("New Fee Rate:", newFeeRate);
+        console2.log("Fee Rate Percentage:", (newFeeRate * 100) / 10000, "%");
+    }
+}
+

@@ -47,13 +47,13 @@ contract TestRun_CreateDebtor_MintWBTC_MintToken is Script {
         debtorAddress = debtorManager.getDebtor(operatorAddress);
         console2.log("Debtor address is:", debtorAddress);
 
-        // // Mint WBTC to operator
+        // Mint WBTC to operator
         // {
         //     vm.startBroadcast(deployerPrivateKey);
         
         //     MockERC20 wbtc = MockERC20(wbtcAddress);
         //     uint256 amount = 1 * 10**8; // 1 WBTC
-        //     wbtc.mint(operatorAddress, amount);
+        //     wbtc.mint(debtorAddress, amount);
             
         //     vm.stopBroadcast();
 

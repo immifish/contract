@@ -122,18 +122,11 @@ contract DebtorManager is IDebtorManager, Initializable, OwnableUpgradeable, UUP
     }
 
     function _estimateDebtUsingLastCycleByFactor(uint256 _debtFactor) internal view returns (int256) {
-        uint256 currentIndex = cycleUpdater.getCurrentCycleIndex();
-        require(currentIndex > 2, "DebtorManager: not enough cycles");
-        int256 lastRateFactor = SafeCast.toInt256(cycleUpdater.getCycle(currentIndex - 1).rateFactor);
-        return SafeCast.toInt256(_debtFactor) * lastRateFactor * (SCALE_FACTOR + SAFE_INTEREST_BUFFER) / SCALE_FACTOR;
-    }
-    
-    function _estimateFinalizedDebtUsingLastCycleByBalance(uint256 _balance) internal view returns (uint256) {
-        uint256 currentIndex = cycleUpdater.getCurrentCycleIndex();
-        require(currentIndex > 2, "DebtorManager: not enough cycles");
-        uint256 debtDiff = cycleUpdater.getCycle(currentIndex).interestSnapShot - 
-                           cycleUpdater.getCycle(currentIndex - 1).interestSnapShot;
-        return _balance * debtDiff;
+        // Get normalized debt estimate from CycleUpdater (handles SCALING_FACTOR)
+        uint256 normalizedDebt = cycleUpdater.estimateDebtByFactor(_debtFactor);
+        
+        // Apply DebtorManager's buffer using SCALE_FACTOR (basis points)
+        return SafeCast.toInt256(normalizedDebt) * (SCALE_FACTOR + SAFE_INTEREST_BUFFER) / SCALE_FACTOR;
     }
 
     //chcek the calcaulation first

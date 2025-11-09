@@ -268,6 +268,7 @@ contract UpgradeValuation is Script {
 
 // Upgrade Cycle Updater
 // forge script script/Deploy.sol:UpgradeCycleUpdater --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_CYCLE_FBTC10_IMPLEMENTATION_ADDRESS src/CycleUpdater.sol:CycleUpdater
 contract UpgradeCycleUpdater is Script {
     function run() external returns (address newImplementation) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -294,6 +295,7 @@ contract UpgradeCycleUpdater is Script {
 
 // Upgrade DebtorManager
 // forge script script/Deploy.sol:UpgradeDebtorManager --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_DEBTOR_MANAGER_FBTC10_IMPLEMENTATION_ADDRESS src/DebtorManager.sol:DebtorManager
 contract UpgradeDebtorManager is Script {
     function run() external returns (address newImplementation) {
         uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
@@ -315,5 +317,32 @@ contract UpgradeDebtorManager is Script {
         console2.log("DebtorManager upgrade completed!");
         console2.log("New implementation address:", newImplementation);
         console2.log("Proxy address (unchanged):", debtorManagerProxy);
+    }
+}
+
+// Upgrade MinerToken (FBTC10)
+// forge script script/Deploy.sol:UpgradeMinerToken --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+// Verify Implementation: forge verify-contract --chain $BASE_SEPOLIA_CHAIN_ID --etherscan-api-key $ETHERSCAN_API_KEY --watch $TEST_FBTC10_IMPLEMENTATION_ADDRESS src/MinerToken.sol:MinerToken
+contract UpgradeMinerToken is Script {
+    function run() external returns (address newImplementation) {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy new implementation
+        MinerToken newImplementationContract = new MinerToken();
+
+        // Upgrade the proxy to point to the new implementation
+        MinerToken minerToken = MinerToken(minerTokenProxy);
+        minerToken.upgradeToAndCall(address(newImplementationContract), "");
+
+        vm.stopBroadcast();
+
+        newImplementation = address(newImplementationContract);
+
+        console2.log("MinerToken upgrade completed!");
+        console2.log("New implementation address:", newImplementation);
+        console2.log("Proxy address (unchanged):", minerTokenProxy);
     }
 }

@@ -137,6 +137,16 @@ contract MinerToken is Initializable, IMinerToken, ERC20Upgradeable, OwnableUpgr
         _debtorManager = _newDebtorManager;
     }
 
+    function setFeeReceiver(address _newFeeReceiver) public onlyOwner {
+        require(_newFeeReceiver != address(0), "MinerToken: fee receiver cannot be zero address");
+        _feeReceiver = _newFeeReceiver;
+    }
+
+    function setFeeRate(uint256 _newFeeRate) public onlyOwner {
+        require(_newFeeRate <= 10000, "MinerToken: fee rate cannot exceed 100%");
+        _feeRate = _newFeeRate;
+    }
+
     // redirect the interest to designated beneficiary. The beneficiary can claim interest for the settlor
     function setDesignatedBeneficiary(address _creditor, address _beneficiary) public {
         require(_creditor != address(0), "MinerToken: creditor cannot be zero address");

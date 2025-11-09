@@ -34,6 +34,11 @@ interface ICycleUpdater {
         uint256 factor
     ) external view returns (uint256 finalizedInterest, uint256 updatedFactor);
 
+    function estimateDebtByFactor(uint256 _debtFactor) 
+        external 
+        view 
+        returns (uint256);
+
 }
 
 /**
@@ -166,8 +171,32 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
                 _lastModifiedTime,
                 _factorBeforeUpdate
             );
+            // Calculate factor accumulated in the current cycle from its start to now
             updatedFactor = _balance * 
-                            (block.timestamp - cycles[_lastModifiedCycle].startTime);
+                            (block.timestamp - cycles[getCurrentCycleIndex()].startTime);
         }
+    }
+
+    /**
+     * @notice Estimates debt using the last completed cycle's rateFactor
+     * @param _debtFactor The debt factor to use in the calculation
+     * @return The estimated debt (normalized by dividing by SCALING_FACTOR)
+     * @dev This function only handles SCALING_FACTOR normalization. 
+     *      The caller (DebtorManager) should apply its own SCALE_FACTOR logic for buffers.
+     */
+    function estimateDebtByFactor(uint256 _debtFactor) 
+        external 
+        view 
+        returns (uint256) 
+    {
+        uint256 currentIndex = getCurrentCycleIndex();
+        require(currentIndex > 0, "CycleUpdater: not enough cycles");
+        
+        // Get the last completed cycle's rateFactor (scaled by SCALING_FACTOR)
+        uint256 lastRateFactor = cycles[currentIndex - 1].rateFactor;
+        
+        // Calculate: debtFactor * rateFactor / SCALING_FACTOR
+        // This normalizes the rateFactor by dividing by SCALING_FACTOR
+        return _debtFactor * lastRateFactor / SCALING_FACTOR;
     }
 }
