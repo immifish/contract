@@ -69,17 +69,13 @@ contract Debtor is IDebtor, ReentrancyGuard {
         require(_isHealthy(), "Debtor: not healthy after");
     }
 
-    function addReserve(uint256 _amount) public {
-        IMinerToken(MINER_TOKEN).addReserve(address(this), _amount);
+    function removeReserve(address _to, uint256 _amount) public debtorOwner keepHealthy{
+        IMinerToken(MINER_TOKEN).removeReserve(_to, _amount);
     }
 
     //burn, which is just transfer token to address(this)
 
     //add collateral, which is just transfer asset (that counts) to address(this)
-
-    function removeReserve(address _to, uint256 _amount) public debtorOwner keepHealthy{
-        IMinerToken(MINER_TOKEN).removeReserve(_to, _amount);
-    }
 
     function mint(uint256 _amount, address _to) public debtorOwner keepHealthy{
         IMinerToken(MINER_TOKEN).mint(_to, _amount);

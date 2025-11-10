@@ -71,3 +71,95 @@ contract TestRun_CreateDebtor_MintWBTC_MintToken is Script {
 
     }
 }
+
+
+//Add Reserve for FBTC10
+// forge script script/TestRun.sol:TestRun_addReserve_removeReserve --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract TestRun_addReserve_removeReserve is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address wbtcAddress = vm.envAddress("TEST_WBTC_ADDRESS");
+        address debtorManagerProxy = vm.envAddress("TEST_DEBTOR_MANAGER_FBTC10_PROXY_ADDRESS");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        uint256 operatorPrivateKey = 0x147f79f0d21249e9cb94935c3a986083f43c5a5d8218ae50ae9117c6552963c8;
+        address operatorAddress = 0x981Fe33c382Aded927C1CAEaaA33474B7898C051;
+    
+
+        // get debtor address
+        DebtorManager debtorManager = DebtorManager(debtorManagerProxy);
+        address debtorAddress; //0x9988E8480a4FF68c7D0872161A982338E0Cae84e
+        debtorAddress = debtorManager.getDebtor(operatorAddress);
+        console2.log("Debtor address is:", debtorAddress);
+
+        //approve wbtc to miner token  
+        // {
+        //     vm.startBroadcast(operatorPrivateKey);
+        //     MockERC20 wbtc = MockERC20(wbtcAddress);
+        //     wbtc.approve(minerTokenProxy, 0.1 * 10**8);
+        //     vm.stopBroadcast();
+        //     console2.log("WBTC approved successfully for miner token:", minerTokenProxy, "Amount:", 0.1 * 10**8);
+        // }
+
+        // add reserve
+        // {
+        //     vm.startBroadcast(operatorPrivateKey);
+        //     MinerToken minerToken = MinerToken(minerTokenProxy);
+        //     minerToken.addReserve(debtorAddress, 0.1 * 10**8);
+        //     vm.stopBroadcast();
+        //     console2.log("Reserve added successfully for debtor:", debtorAddress, "Amount:", 0.1 * 10**8);
+        // }
+
+        // remove reserve
+        {
+            vm.startBroadcast(operatorPrivateKey);
+            Debtor debtor = Debtor(debtorAddress);
+            debtor.removeReserve(operatorAddress, 0.01 * 10**8);
+            vm.stopBroadcast();
+            console2.log("Reserve removed successfully for debtor:", debtorAddress, "Amount:", 0.01 * 10**8);
+        }
+
+    }
+}
+
+//Add Collateral for FBTC10
+// forge script script/TestRun.sol:TestRun_addCollateral_removeCollateral --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract TestRun_addCollateral_removeCollateral is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address wbtcAddress = vm.envAddress("TEST_WBTC_ADDRESS");
+        address debtorManagerProxy = vm.envAddress("TEST_DEBTOR_MANAGER_FBTC10_PROXY_ADDRESS");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        uint256 operatorPrivateKey = 0x147f79f0d21249e9cb94935c3a986083f43c5a5d8218ae50ae9117c6552963c8;
+        address operatorAddress = 0x981Fe33c382Aded927C1CAEaaA33474B7898C051;
+    
+
+        // get debtor address
+        DebtorManager debtorManager = DebtorManager(debtorManagerProxy);
+        address debtorAddress; //0x9988E8480a4FF68c7D0872161A982338E0Cae84e
+        debtorAddress = debtorManager.getDebtor(operatorAddress);
+        console2.log("Debtor address is:", debtorAddress);
+
+        //transfer wbtc to debtor as addCollateral
+        // {
+        //     vm.startBroadcast(operatorPrivateKey);
+        //     MockERC20 wbtc = MockERC20(wbtcAddress);
+        //     wbtc.transfer(debtorAddress, 0.01 * 10**8);
+        //     vm.stopBroadcast();
+        //     console2.log("WBTC transferred successfully to debtor:", debtorAddress, "Amount:", 0.01 * 10**8);
+        // }
+
+        
+
+        // remove collateral
+        {
+            vm.startBroadcast(operatorPrivateKey);
+            Debtor debtor = Debtor(debtorAddress);
+            debtor.removeCollateral(wbtcAddress, operatorAddress, 0.01 * 10**8);
+            vm.stopBroadcast();
+            console2.log("Collateral removed successfully for debtor:", debtorAddress, "Amount:", 0.01 * 10**8);
+        }
+
+    }
+}

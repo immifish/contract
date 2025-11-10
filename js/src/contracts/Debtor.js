@@ -36,25 +36,6 @@ export class Debtor extends BaseContract {
   }
 
   /**
-   * Add reserve to the debtor
-   * @param {string} amount - Amount to add (human readable format)
-   * @param {Object} options - Transaction options
-   * @returns {Promise<Object>} Transaction result
-   */
-  async addReserve(amount, options = {}) {
-    try {
-      const parsedAmount = parseTokenAmount(amount);
-      const tx = await this.contract.addReserve(parsedAmount, options);
-      return {
-        hash: tx.hash,
-        wait: () => this.waitForTransaction(tx.hash)
-      };
-    } catch (error) {
-      throw new Error(`Failed to add reserve: ${error.message}`);
-    }
-  }
-
-  /**
    * Remove reserve from the debtor (owner only, must maintain healthy status)
    * @param {string} to - Recipient address
    * @param {string} amount - Amount to remove (human readable format)

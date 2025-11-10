@@ -148,10 +148,6 @@ console.log('Interest reserve adjusted:', healthCheck.interestReserveAdjusted);
 ### Debtor Operations
 
 ```javascript
-// Add reserve to debtor
-const addReserveTx = await debtor.addReserve('1000');
-await addReserveTx.wait();
-
 // Remove reserve (must maintain healthy status)
 const removeReserveTx = await debtor.removeReserve(recipientAddress, '500');
 await removeReserveTx.wait();

@@ -9,6 +9,7 @@ import {MockERC20} from "../src/mock/MockERC20.sol";
 import {MinerToken} from "../src/MinerToken.sol";
 import {Debtor} from "../src/debtor/Debtor.sol";
 import {DebtorManager} from "../src/DebtorManager.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Set Data Feed for WBTC
 // forge script script/Interact.sol:SetDataFeedForWBTC --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
@@ -274,6 +275,39 @@ contract SetFeeRateForFBTC10 is Script {
         console2.log("MinerToken Proxy:", minerTokenProxy);
         console2.log("New Fee Rate:", newFeeRate);
         console2.log("Fee Rate Percentage:", (newFeeRate * 100) / 10000, "%");
+    }
+}
+
+// Add Reserve for FBTC10
+// forge script script/Interact.sol:AddReserveForFBTC10 --chain-id $BASE_SEPOLIA_CHAIN_ID --rpc-url $ALCHEMY_BASE_SEPOLIA_RPC_URL --broadcast -vvvv
+contract AddReserveForFBTC10 is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("TEST_ACCOUNT_PRIVATE_KEY");
+        address minerTokenProxy = vm.envAddress("TEST_FBTC10_PROXY_ADDRESS");
+
+        // Parameters - modify these directly in the script
+        address debtor = vm.envAddress("TEST_DEBTOR_ADDRESS"); // Debtor address
+        uint256 amount = 0.1 * 10**18; // Amount to add (adjust based on interest token decimals)
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        MinerToken minerToken = MinerToken(minerTokenProxy);
+        address interestTokenAddress = minerToken.interestToken();
+        
+        // Approve the MinerToken to spend interest tokens
+        IERC20 interestToken = IERC20(interestTokenAddress);
+        interestToken.approve(minerTokenProxy, amount);
+        
+        // Add reserve
+        minerToken.addReserve(debtor, amount);
+
+        vm.stopBroadcast();
+
+        console2.log("Reserve added successfully!");
+        console2.log("MinerToken Proxy:", minerTokenProxy);
+        console2.log("Debtor Address:", debtor);
+        console2.log("Amount:", amount);
+        console2.log("Interest Token Address:", interestTokenAddress);
     }
 }
 
