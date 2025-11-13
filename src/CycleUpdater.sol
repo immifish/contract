@@ -39,6 +39,11 @@ interface ICycleUpdater {
         view 
         returns (uint256);
 
+    function estimateDebtByBalance(uint256 _balance) 
+        external 
+        view 
+        returns (uint256);
+
 }
 
 /**
@@ -198,5 +203,39 @@ contract CycleUpdater is Initializable, OwnableUpgradeable, UUPSUpgradeable, ICy
         // Calculate: debtFactor * rateFactor / SCALING_FACTOR
         // This normalizes the rateFactor by dividing by SCALING_FACTOR
         return _debtFactor * lastRateFactor / SCALING_FACTOR;
+    }
+
+    /**
+     * @notice Estimates yield using the last finalized cycle's interest
+     * @param _balance The balance to use in the calculation
+     * @return The estimated yield (normalized by dividing by SCALING_FACTOR)
+     * @dev This function estimates yield based on the interest generated in the last finalized cycle.
+     *      Since interestSnapShot is accumulative, we calculate the difference between
+     *      the last finalized cycle's snapshot and the previous cycle's snapshot to get
+     *      the interest generated in that specific cycle.
+     */
+    function estimateDebtByBalance(uint256 _balance) 
+        external 
+        view 
+        returns (uint256) 
+    {
+        uint256 currentIndex = getCurrentCycleIndex();
+        require(currentIndex > 0, "CycleUpdater: not enough cycles");
+        
+        // Get the last finalized cycle's interest snapshot (accumulative)
+        uint256 lastCycleSnapshot = cycles[currentIndex - 1].interestSnapShot;
+        
+        // Get the previous cycle's interest snapshot (or 0 if this is the first cycle)
+        // The difference gives us the interest generated in the last finalized cycle
+        uint256 previousCycleSnapshot = currentIndex > 1 
+            ? cycles[currentIndex - 2].interestSnapShot 
+            : 0;
+        
+        // Calculate the interest generated in the last finalized cycle
+        uint256 cycleInterest = lastCycleSnapshot - previousCycleSnapshot;
+        
+        // Calculate: balance * cycleInterest / SCALING_FACTOR
+        // This normalizes by dividing by SCALING_FACTOR
+        return _balance * cycleInterest / SCALING_FACTOR;
     }
 }

@@ -111,6 +111,20 @@ export class CycleUpdater extends BaseContract {
   }
 
   /**
+   * Estimate yield using the last finalized cycle's interest
+   * @param {string|number|bigint} balance - Token balance
+   * @returns {Promise<string>} Estimated yield (normalized by SCALING_FACTOR)
+   */
+  async estimateDebtByBalance(balance) {
+    try {
+      const yield_ = await this.contract.estimateDebtByBalance(balance);
+      return yield_.toString();
+    } catch (error) {
+      throw new Error(`Failed to estimate debt by balance: ${error.message}`);
+    }
+  }
+
+  /**
    * Get scaling factor constant
    * @returns {Promise<string>} Scaling factor (10^30)
    */
